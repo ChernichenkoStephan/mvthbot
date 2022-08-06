@@ -7,14 +7,6 @@ import (
 	lex "github.com/ChernichenkoStephan/mvthbot/internal/lexemes"
 )
 
-//
-type Solver interface {
-	Solve(equation []string) (int, error)
-}
-
-//
-type SolveFunc func(equation []string) (int, error)
-
 func pop(stack []float64) (float64, []float64) {
 	op := stack[len(stack)-1]
 	stack = stack[:len(stack)-1]

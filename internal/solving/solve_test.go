@@ -4,7 +4,7 @@ import "testing"
 
 func TestSum(t *testing.T) {
 	ref := 4.0
-	res, err := Solve([]string{"2", "2", "+"})
+	res, err := solve([]string{"2", "2", "+"})
 	if err != nil {
 		t.Errorf("Got error: %v", err)
 	}
@@ -15,7 +15,7 @@ func TestSum(t *testing.T) {
 
 func TestSub(t *testing.T) {
 	ref := 0.0
-	res, err := Solve([]string{"2", "2", "-"})
+	res, err := solve([]string{"2", "2", "-"})
 	if err != nil {
 		t.Errorf("Got error: %v", err)
 	}
@@ -26,7 +26,7 @@ func TestSub(t *testing.T) {
 
 func TestMul(t *testing.T) {
 	ref := 4.0
-	res, err := Solve([]string{"2", "2", "*"})
+	res, err := solve([]string{"2", "2", "*"})
 	if err != nil {
 		t.Errorf("Got error: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestMul(t *testing.T) {
 
 func TestDiv(t *testing.T) {
 	ref := 1.0
-	res, err := Solve([]string{"2", "2", "/"})
+	res, err := solve([]string{"2", "2", "/"})
 	if err != nil {
 		t.Errorf("Got error: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestDiv(t *testing.T) {
 
 func TestSpo(t *testing.T) {
 	ref := 4.0
-	res, err := Solve([]string{"2", "2", "^"})
+	res, err := solve([]string{"2", "2", "^"})
 	if err != nil {
 		t.Errorf("Got error: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestSpo(t *testing.T) {
 
 func TestPov(t *testing.T) {
 	ref := 4.0
-	res, err := Solve([]string{"2", "2", "pow"})
+	res, err := solve([]string{"2", "2", "pow"})
 	if err != nil {
 		t.Errorf("Got error: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestPov(t *testing.T) {
 
 func TestLog(t *testing.T) {
 	ref := 1.0
-	res, err := Solve([]string{"2", "2", "log"})
+	res, err := solve([]string{"2", "2", "log"})
 	if err != nil {
 		t.Errorf("Got error: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestLog(t *testing.T) {
 
 func TestMod(t *testing.T) {
 	ref := 0.0
-	res, err := Solve([]string{"2", "2", "mod"})
+	res, err := solve([]string{"2", "2", "mod"})
 	if err != nil {
 		t.Errorf("Got error: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestMod(t *testing.T) {
 
 func TestExp(t *testing.T) {
 	ref := 7.38905609893065
-	res, err := Solve([]string{"2", "exp"})
+	res, err := solve([]string{"2", "exp"})
 	if err != nil {
 		t.Errorf("Got error: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestDiv0(t *testing.T) {
 	c := "1/0"
 	t.Run(c, func(t *testing.T) {
     ref := []string{}
-    res, err := Solve(c)
+    res, err := solve(c)
 		if err == nil {
       t.Errorf("got no error, but there is one here > '%v' ", c)
     }
@@ -117,7 +117,7 @@ func TestDiv0(t *testing.T) {
   c := "(1/(1-1))"
 	t.Run(c, func(t *testing.T) {
     ref := []string{}
-    res, err := Solve(c)
+    res, err := solve(c)
 		if err == nil {
       t.Errorf("got no error, but there is one here > '%v' ", c)
     }

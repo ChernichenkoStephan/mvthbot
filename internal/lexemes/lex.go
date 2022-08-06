@@ -1,7 +1,5 @@
 package lexemes
 
-type LexemeType int
-
 const (
 	OPERATION LexemeType = iota
 	SINGLE_PLACE_FUNC
@@ -10,14 +8,6 @@ const (
 )
 
 var OP_SYM = []rune{'+', '-', '*', '/', '^'}
-
-type MathOperation func(args ...float64) (float64, error)
-
-type Lexeme struct {
-	LexType  LexemeType
-	Priority int8
-	Op       MathOperation
-}
 
 var _SUPPORTED_LEXEMES map[string]*Lexeme = map[string]*Lexeme{
 	"+": {OPERATION, 0, Sum},
