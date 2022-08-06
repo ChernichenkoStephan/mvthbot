@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/ChernichenkoStephan/mvthbot/internal/converting"
+	"github.com/ChernichenkoStephan/mvthbot/internal/user"
 )
 
 func _test(task string, ref []string) {
@@ -26,5 +27,5 @@ func main() {
 			fmt.Println(res)
 		}
 	*/
-
+	user.Dummy()
 }
