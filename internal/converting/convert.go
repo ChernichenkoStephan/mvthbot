@@ -6,6 +6,7 @@ import (
 	"unicode"
 
 	lex "github.com/ChernichenkoStephan/mvthbot/internal/lexemes"
+	"github.com/ChernichenkoStephan/mvthbot/internal/utils"
 )
 
 // RPNConverter
@@ -16,21 +17,29 @@ type RPNConverter interface {
 // RPNConverterFunc
 type RPNConverterFunc func(line string) ([]string, error)
 
-func putNum(buffer []rune, stack []string) ([]rune, []string, error) {
-	num := string(buffer)
-	_, err := strconv.ParseFloat(num, 64)
-	if err != nil {
-		return []rune{}, []string{}, fmt.Errorf("Not number %v", err)
+func validateName(name string) error {
+	if unicode.IsDigit([]rune(name)[0]) {
+		return fmt.Errorf("Name can't start with number")
 	}
-	stack = append(stack, num)
-	buffer = []rune{}
-	return buffer, stack, nil
+	for _, c := range name {
+		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
+			return fmt.Errorf("Unvalid variable character: '%c'", c)
+		}
+	}
+	return nil
 }
 
-func pop(stack []string) (string, []string) {
-	op := stack[len(stack)-1]
-	stack = stack[:len(stack)-1]
-	return op, stack
+func putVal(buffer []rune, stack []string) ([]rune, []string, error) {
+	v := string(buffer)
+	_, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		if err = validateName(v); err != nil {
+			return []rune{}, []string{}, fmt.Errorf("Not number or name %v", err)
+		}
+	}
+	stack = append(stack, v)
+	buffer = []rune{}
+	return buffer, stack, nil
 }
 
 func ToRPN(equation string) ([]string, error) {
@@ -65,7 +74,7 @@ func ToRPN(equation string) ([]string, error) {
 			}
 		case c == ')':
 			if len(buffer) > 0 {
-				buffer, output, err = putNum(buffer, output)
+				buffer, output, err = putVal(buffer, output)
 				if err != nil {
 					return []string{}, fmt.Errorf("Not number %v", err)
 				}
@@ -76,7 +85,7 @@ func ToRPN(equation string) ([]string, error) {
 					return []string{}, fmt.Errorf("Bracket error %d|%c", i, c)
 				}
 
-				op, opStack = pop(opStack)
+				op, opStack = utils.Pop(opStack)
 				if t, ok := lex.GetLexType(op); ok {
 					if t == lex.SINGLE_PLACE_FUNC || t == lex.DOUBLE_PLACE_FUNC {
 						output = append(output, op)
@@ -91,7 +100,7 @@ func ToRPN(equation string) ([]string, error) {
 
 		case c == ';':
 			if len(buffer) != 0 {
-				buffer, output, err = putNum(buffer, output)
+				buffer, output, err = putVal(buffer, output)
 				if err != nil {
 					return []string{}, fmt.Errorf("Not number %v", err)
 				}
@@ -106,12 +115,12 @@ func ToRPN(equation string) ([]string, error) {
 				if t == lex.SINGLE_PLACE_FUNC || t == lex.DOUBLE_PLACE_FUNC {
 					break
 				}
-				op, opStack = pop(opStack)
+				op, opStack = utils.Pop(opStack)
 				output = append(output, op)
 			}
 		case lex.IsLexRune(c):
 			if len(buffer) != 0 {
-				buffer, output, err = putNum(buffer, output)
+				buffer, output, err = putVal(buffer, output)
 				if err != nil {
 					return []string{}, fmt.Errorf("Not number %v", err)
 				}
@@ -126,7 +135,7 @@ func ToRPN(equation string) ([]string, error) {
 				np, _ := lex.GetLexPriority(string(c))
 
 				if hp >= np {
-					op, opStack = pop(opStack)
+					op, opStack = utils.Pop(opStack)
 					output = append(output, op)
 				} else {
 					break
@@ -139,7 +148,7 @@ func ToRPN(equation string) ([]string, error) {
 	}
 
 	if len(buffer) > 0 {
-		buffer, output, err = putNum(buffer, output)
+		buffer, output, err = putVal(buffer, output)
 		if err != nil {
 			return []string{}, fmt.Errorf("Not number %v", err)
 		}
@@ -150,7 +159,7 @@ func ToRPN(equation string) ([]string, error) {
 			break
 		}
 
-		op, opStack = pop(opStack)
+		op, opStack = utils.Pop(opStack)
 		if op == "(" || op == ")" {
 			return []string{}, fmt.Errorf("Bracket error")
 		}

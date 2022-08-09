@@ -1,31 +1,37 @@
 package main
 
 import (
-	"fmt"
+	"context"
+	"log"
 
-	"github.com/ChernichenkoStephan/mvthbot/internal/converting"
-	"github.com/ChernichenkoStephan/mvthbot/internal/user"
+	"github.com/ChernichenkoStephan/mvthbot/internal/app"
+	"github.com/go-faster/errors"
+	"golang.org/x/sync/errgroup"
 )
 
-func _test(task string, ref []string) {
-	t, err := converting.ToRPN(task)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(t)
-	fmt.Println(ref)
-}
-
 func main() {
-	/*
-		v, err := converting.ToRPN("123.321+2")
-		if err == nil {
-			fmt.Println(v)
+
+	app.Run(func(ctx context.Context /*log logger*/) error {
+		log.Println("Starting...")
+		g, ctx := errgroup.WithContext(ctx)
+
+		app, err := InitApp()
+		if err != nil {
+			return errors.Wrap(err, "initialize")
 		}
-		res, err := solving.Solve(v)
-		if err == nil {
-			fmt.Println(res)
-		}
-	*/
-	user.Dummy()
+
+		// Run API
+		g.Go(func() error {
+			return runAPI(app)
+		})
+
+		// Run Bot
+		g.Go(func() error {
+			// return runBot(app)
+			return nil
+		})
+
+		return g.Wait()
+	})
+
 }

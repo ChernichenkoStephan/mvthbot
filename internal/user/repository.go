@@ -1,6 +1,5 @@
 package user
 
-/*
 import (
 	"context"
 	"fmt"
@@ -8,26 +7,27 @@ import (
 
 	solv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
 )
-type userRepository struct {
+
+type IMUserRepository struct {
 	mx sync.Mutex
-	db *storage
+	db *IMStorage
 }
 
-func NewUserRepository() *userRepository {
-	db := _default_storage
-	return &userRepository{
+func NewImdbUserRepository() *IMUserRepository {
+	db := GetDefaultStorage()
+	return &IMUserRepository{
 		db: db,
 	}
 }
 
-func (repo *userRepository) GetUsers(ctx context.Context) (*[]User, error) {
+func (repo *IMUserRepository) GetUsers(ctx context.Context) (*[]User, error) {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	resp := repo.db.getUsers()
 	return resp, nil
 }
 
-func (repo *userRepository) GetUser(ctx context.Context, userID int64) (*User, error) {
+func (repo *IMUserRepository) GetUser(ctx context.Context, userID int64) (*User, error) {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	u, ok := repo.db.getUser(userID)
@@ -37,14 +37,14 @@ func (repo *userRepository) GetUser(ctx context.Context, userID int64) (*User, e
 	return u, nil
 }
 
-func (repo *userRepository) AddUser(ctx context.Context, user *User) error {
+func (repo *IMUserRepository) AddUser(ctx context.Context, user *User) error {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	repo.db.addUser(user)
 	return nil
 }
 
-func (repo *userRepository) UpdateUser(ctx context.Context, user *User) error {
+func (repo *IMUserRepository) UpdateUser(ctx context.Context, user *User) error {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	err := repo.db.updateUser(user)
@@ -54,14 +54,14 @@ func (repo *userRepository) UpdateUser(ctx context.Context, user *User) error {
 	return nil
 }
 
-func (repo *userRepository) DeleteUser(ctx context.Context, userID int64) error {
+func (repo *IMUserRepository) DeleteUser(ctx context.Context, userID int64) error {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	repo.db.deleteUser(userID)
 	return nil
 }
 
-func (repo *userRepository) GetHistory(ctx context.Context, userID int64) (*[]solv.Statement, error) {
+func (repo *IMUserRepository) GetHistory(ctx context.Context, userID int64) (*[]solv.Statement, error) {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	h, err := repo.db.getHistory(userID)
@@ -71,7 +71,7 @@ func (repo *userRepository) GetHistory(ctx context.Context, userID int64) (*[]so
 	return h, nil
 }
 
-func (repo *userRepository) AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error {
+func (repo *IMUserRepository) AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	err := repo.db.addStatement(userID, statement)
@@ -81,7 +81,7 @@ func (repo *userRepository) AddStatement(ctx context.Context, userID int64, stat
 	return nil
 }
 
-func (repo *userRepository) DeleteHistory(ctx context.Context, userID int64) error {
+func (repo *IMUserRepository) DeleteHistory(ctx context.Context, userID int64) error {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	err := repo.db.deleteHistory(userID)
@@ -91,19 +91,25 @@ func (repo *userRepository) DeleteHistory(ctx context.Context, userID int64) err
 	return nil
 }
 
-type variableRepository struct {
+//
+//
+//
+//
+//
+
+type IMVariableRepository struct {
 	mx sync.Mutex
-	db *storage
+	db *IMStorage
 }
 
-func NewVariableRepository() *variableRepository {
-	db := _default_storage
-	return &variableRepository{
+func NewImdbVariableRepository() *IMVariableRepository {
+	db := GetDefaultStorage()
+	return &IMVariableRepository{
 		db: db,
 	}
 }
 
-func (repo *variableRepository) CreateUserVariable(ctx context.Context, userID int64, name string, value float64) error {
+func (repo *IMVariableRepository) CreateUserVariable(ctx context.Context, userID int64, name string, value float64) error {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	err := repo.db.addVariable(name, value, userID)
@@ -113,7 +119,7 @@ func (repo *variableRepository) CreateUserVariable(ctx context.Context, userID i
 	return nil
 }
 
-func (repo *variableRepository) CreateUserVariables(
+func (repo *IMVariableRepository) CreateUserVariables(
 	ctx context.Context,
 	userID int64,
 	names []string,
@@ -137,7 +143,7 @@ func (repo *variableRepository) CreateUserVariables(
 
 }
 
-func (repo *variableRepository) GetUserVariable(ctx context.Context, userID int64, name string) (float64, error) {
+func (repo *IMVariableRepository) GetUserVariable(ctx context.Context, userID int64, name string) (float64, error) {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	v, err := repo.db.getVariable(name, userID)
@@ -148,7 +154,7 @@ func (repo *variableRepository) GetUserVariable(ctx context.Context, userID int6
 
 }
 
-func (repo *variableRepository) GetUserVariables(
+func (repo *IMVariableRepository) GetUserVariables(
 	ctx context.Context,
 	userID int64,
 	names []string,
@@ -167,7 +173,7 @@ func (repo *variableRepository) GetUserVariables(
 	return vs, nil
 }
 
-func (repo *variableRepository) GetAllUserVariables(ctx context.Context, userID int64) (VMap, error) {
+func (repo *IMVariableRepository) GetAllUserVariables(ctx context.Context, userID int64) (VMap, error) {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	vs := make(VMap)
@@ -182,7 +188,7 @@ func (repo *variableRepository) GetAllUserVariables(ctx context.Context, userID 
 	return vs, nil
 }
 
-func (repo *variableRepository) UpdateUserVariable(ctx context.Context, userID int64, name string, value float64) error {
+func (repo *IMVariableRepository) UpdateUserVariable(ctx context.Context, userID int64, name string, value float64) error {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	err := repo.db.updateVariable(name, value, userID)
@@ -192,7 +198,7 @@ func (repo *variableRepository) UpdateUserVariable(ctx context.Context, userID i
 	return nil
 }
 
-func (repo *variableRepository) UpdateUserVariables(
+func (repo *IMVariableRepository) UpdateUserVariables(
 	ctx context.Context,
 	userID int64,
 	names []string,
@@ -216,7 +222,7 @@ func (repo *variableRepository) UpdateUserVariables(
 
 }
 
-func (repo *variableRepository) DeleteUserVariable(ctx context.Context, userID int64, name string) error {
+func (repo *IMVariableRepository) DeleteUserVariable(ctx context.Context, userID int64, name string) error {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	err := repo.db.removeVariable(name, userID)
@@ -226,7 +232,7 @@ func (repo *variableRepository) DeleteUserVariable(ctx context.Context, userID i
 	return nil
 }
 
-func (repo *variableRepository) DeleteUserVariables(ctx context.Context, userID int64) error {
+func (repo *IMVariableRepository) DeleteUserVariables(ctx context.Context, userID int64) error {
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
 	err := repo.db.clearUserVariables(userID)
@@ -235,4 +241,3 @@ func (repo *variableRepository) DeleteUserVariables(ctx context.Context, userID 
 	}
 	return nil
 }
-*/

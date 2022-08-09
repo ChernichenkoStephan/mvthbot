@@ -257,6 +257,68 @@ func TestMixed(t *testing.T) {
 	})
 }
 
+func TestSingleVariables(t *testing.T) {
+	c := "a+b"
+	t.Run(c, func(t *testing.T) {
+		ref := []string{"a", "b", "+"}
+		res, err := ToRPN(c)
+		if err != nil {
+			t.Errorf("got error: %v", err)
+		}
+		if !equals(res, ref) {
+			t.Errorf("got %q, wanted %q", res, ref)
+		}
+	})
+
+	c = "a-b"
+	t.Run(c, func(t *testing.T) {
+		ref := []string{"a", "b", "-"}
+		res, err := ToRPN(c)
+		if err != nil {
+			t.Errorf("got error: %v", err)
+		}
+		if !equals(res, ref) {
+			t.Errorf("got %q, wanted %q", res, ref)
+		}
+	})
+
+	c = "a*b"
+	t.Run(c, func(t *testing.T) {
+		ref := []string{"a", "b", "*"}
+		res, err := ToRPN(c)
+		if err != nil {
+			t.Errorf("got error: %v", err)
+		}
+		if !equals(res, ref) {
+			t.Errorf("got %q, wanted %q", res, ref)
+		}
+	})
+
+	c = "a/b"
+	t.Run(c, func(t *testing.T) {
+		ref := []string{"a", "b", "/"}
+		res, err := ToRPN(c)
+		if err != nil {
+			t.Errorf("got error: %v", err)
+		}
+		if !equals(res, ref) {
+			t.Errorf("got %q, wanted %q", res, ref)
+		}
+	})
+
+	c = "a^b"
+	t.Run(c, func(t *testing.T) {
+		ref := []string{"a", "b", "^"}
+		res, err := ToRPN(c)
+		if err != nil {
+			t.Errorf("got error: %v", err)
+		}
+		if !equals(res, ref) {
+			t.Errorf("got %q, wanted %q", res, ref)
+		}
+	})
+}
+
 /*
 func TestLeftBracketsError(t *testing.T) {
 	c := "2+2)"

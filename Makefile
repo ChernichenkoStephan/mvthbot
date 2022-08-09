@@ -6,13 +6,11 @@ coverage:
 	@./go.coverage.sh
 .PHONY: coverage
 
-generate:
-	go generate
-	go generate ./...
-.PHONY: generate
-
 build:
-	CGO_ENABLED=0 go build ./cmd/bot
+	CGO_ENABLED=0 go build ./cmd/mvthbot
+
+clear:
+	rm mvthbot
 
 check_generated: generate
 	git diff --exit-code

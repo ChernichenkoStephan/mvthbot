@@ -9,6 +9,8 @@ const (
 
 var OP_SYM = []rune{'+', '-', '*', '/', '^'}
 
+var FUNC_NAMES = []string{"pow", "log", "mod", "exp", "sqrt"}
+
 var _SUPPORTED_LEXEMES map[string]*Lexeme = map[string]*Lexeme{
 	"+": {OPERATION, 0, Sum},
 	"-": {OPERATION, 0, Sub},

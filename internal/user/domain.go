@@ -49,14 +49,14 @@ type VariableService interface {
 	AddUserVariable(ctx context.Context, userID int64, name string, value float64) error
 	AddUserVariables(ctx context.Context, userID int64, name []string, value []float64) error
 
-	FetchUserVariable(ctx context.Context, userID int64, names []string) (float64, error)
+	FetchUserVariable(ctx context.Context, userID int64, name string) (float64, error)
 	FetchUserVariables(ctx context.Context, userID int64, names []string) (VMap, error)
 	FetchAllUserVariables(ctx context.Context, userID int64) (VMap, error)
 
 	SetUserVariable(ctx context.Context, userID int64, name string, value float64) error
 	SetUserVariables(ctx context.Context, userID int64, name []string, value []float64) error
 
-	DeleteUserVariable(ctx context.Context, userID int64) error
+	DeleteUserVariable(ctx context.Context, userID int64, name string) error
 	ClearUserVariables(ctx context.Context, userID int64) error
 }
 
@@ -73,4 +73,19 @@ type VariableRepository interface {
 
 	DeleteUserVariable(ctx context.Context, userID int64, name string) error
 	DeleteUserVariables(ctx context.Context, userID int64) error
+}
+
+//
+//
+//  Data types for views
+//
+//
+
+type StatementDTO struct {
+	names    []string `validate:"required"`
+	equation string   `validate:"required"`
+}
+
+type VariablesPackDTO struct {
+	statements []StatementDTO `validate:"required"`
 }
