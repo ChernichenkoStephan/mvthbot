@@ -8,11 +8,13 @@ import (
 
 type VMap map[string]float64
 
-// Represents the 'User' object.
 type User struct {
 
 	// Telegram user id
 	ID int64
+
+	// Randomly generated password
+	Password string
 
 	// History of solving
 	History *[]solv.Statement

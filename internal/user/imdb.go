@@ -10,8 +10,17 @@ type IMStorage struct {
 	data map[int64]*User
 }
 
+var _defaultUser *User = &User{
+	ID:        11111,
+	Password:  "password",
+	History:   &[]solving.Statement{},
+	Variables: VMap{},
+}
+
 var _default *IMStorage = &IMStorage{
-	data: map[int64]*User{},
+	data: map[int64]*User{
+		_defaultUser.ID: _defaultUser,
+	},
 }
 
 func GetDefaultStorage() *IMStorage {
@@ -38,7 +47,13 @@ func (s IMStorage) getUser(id int64) (*User, bool) {
 		return u.Copy(), ok
 	}
 	return &User{}, false
+}
 
+func (s IMStorage) GetAuth(id int64) (string, bool) {
+	if u, ok := s.data[id]; ok {
+		return u.Password, ok
+	}
+	return "", false
 }
 
 func (s *IMStorage) updateUser(u *User) error {

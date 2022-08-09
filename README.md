@@ -33,6 +33,11 @@ Math solving service
 
 also in JWT and headers
 
+### Auth
+
+auth
+    [POST] api/v1/solve/2%2B2/
+
 ### Solve
 
     [POST] api/v1/solve/2%2B2/
@@ -44,9 +49,9 @@ also in JWT and headers
 
 ### Variables
 
-    [POST] api/v1/variables/[a,b]/"2+2"
+    [POST] api/v1/variables/a/"2+2"
 
-    [POST] api/v1/variables/
+    [POST] api/v1/variables
     {
         statements: [
         {
@@ -63,21 +68,21 @@ also in JWT and headers
         },
     }
 
-    [GET] api/v1/variables/["a", "b"]
+    [GET] api/v1/variables/a
 
-    [GET] api/v1/variables/
+    [GET] api/v1/variables
     {
         names: ["a", "b"]
     }
 
-    [DELETE] api/v1/variables/["a", "b"]
+    [DELETE] api/v1/variables/a
 
-    [DELETE] api/v1/variables/
+    [DELETE] api/v1/variables
     {
         names:["a", "b"]
     }
 
-    [DELETE] api/v1/variables/
+    [DELETE] api/v1/variables
 
 ### History
 

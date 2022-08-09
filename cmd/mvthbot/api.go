@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/ChernichenkoStephan/mvthbot/internal/auth"
 	"github.com/ChernichenkoStephan/mvthbot/internal/misc"
 	"github.com/ChernichenkoStephan/mvthbot/internal/solving"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/favicon"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 )
@@ -30,15 +32,15 @@ func setupAPI(app *App) error {
 			})
 		},
 	}))
-	// api.Use(logger.New())
+	// TODO: change to zap
+	app.api.Use(logger.New())
 	app.api.Use(recover.New())
 	app.api.Use(requestid.New())
 
 	// Prepare our endpoints for the API.
 	misc.NewMiscHandler(app.api.Group("/api/v1"))
 	solving.NewSolveHandler(app.api.Group("/api/v1/solve"))
-
-	//'/api/v1/solve'
+	auth.NewAuthHandler(app.api.Group("/api/v1/auth"), app.authRepository, app.bot)
 
 	// Prepare an endpoint for 'Not Found'.
 	app.api.All("*", func(c *fiber.Ctx) error {

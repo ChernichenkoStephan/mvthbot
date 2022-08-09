@@ -5,11 +5,14 @@ go 1.18
 require (
 	github.com/go-faster/errors v0.6.1
 	github.com/gofiber/fiber/v2 v2.36.0
+	github.com/gofiber/jwt/v3 v3.2.14
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 )
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
+	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.38.0 // indirect

@@ -5,6 +5,8 @@ import (
 
 	"github.com/go-faster/errors"
 
+	"github.com/ChernichenkoStephan/mvthbot/internal/auth"
+	tg "github.com/ChernichenkoStephan/mvthbot/internal/bot"
 	"github.com/ChernichenkoStephan/mvthbot/internal/user"
 	"github.com/gofiber/fiber/v2"
 )
@@ -13,6 +15,7 @@ type App struct {
 	api *fiber.App
 
 	// bot
+	bot *tg.Bot
 
 	// db
 
@@ -23,6 +26,7 @@ type App struct {
 	// Repositories
 	userRepository     user.UserRepository
 	variableRepository user.VariableRepository
+	authRepository     auth.UserAuthRepository
 }
 
 func InitApp( /*metrics logger db*/ ) (*App, error) {
@@ -35,18 +39,24 @@ func InitApp( /*metrics logger db*/ ) (*App, error) {
 
 	ur := user.NewImdbUserRepository()
 	vr := user.NewImdbVariableRepository()
+	ar := auth.NewUserAuthRepository()
 
 	us := user.NewUserService(ur)
 	vs := user.NewVariableService(vr)
 
+	b := tg.NewBot()
+
 	app := &App{
 		api: api,
+
+		bot: b,
 
 		userService:     us,
 		veriableService: vs,
 
 		userRepository:     ur,
 		variableRepository: vr,
+		authRepository:     ar,
 	}
 
 	// DB setup
