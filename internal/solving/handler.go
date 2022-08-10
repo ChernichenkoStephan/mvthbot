@@ -33,7 +33,7 @@ func (h *solveHandler) HandleSolve(c *fiber.Ctx) error {
 		})
 	}
 
-	res, err := Solve(eq, VMap{})
+	res, err := Solve(eq, map[string]float64{})
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -63,7 +63,7 @@ func (h *solveHandler) HandleMultipleSolve(c *fiber.Ctx) error {
 		if eq, err := converting.ToRPN(e); err != nil {
 			eStr = fmt.Sprintf("Error %v\nin %d equation", err, i+1)
 		} else {
-			val, err = Solve(eq, VMap{})
+			val, err = Solve(eq, map[string]float64{})
 			if err != nil {
 				eStr = fmt.Sprintf("Error %v\nin %d equation", err, i+1)
 			}

@@ -7,6 +7,7 @@ import (
 	"github.com/ChernichenkoStephan/mvthbot/internal/auth"
 	"github.com/ChernichenkoStephan/mvthbot/internal/misc"
 	"github.com/ChernichenkoStephan/mvthbot/internal/solving"
+	"github.com/ChernichenkoStephan/mvthbot/internal/user"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/favicon"
@@ -41,6 +42,15 @@ func setupAPI(app *App) error {
 	misc.NewMiscHandler(app.api.Group("/api/v1"))
 	solving.NewSolveHandler(app.api.Group("/api/v1/solve"))
 	auth.NewAuthHandler(app.api.Group("/api/v1/auth"), app.authRepository, app.bot)
+	user.NewVariableHandler(
+		app.api.Group("/api/v1/variables", auth.JWTMiddleware()),
+		app.userService,
+		app.veriableService,
+	)
+	user.NewHistoryHandler(
+		app.api.Group("/api/v1/history", auth.JWTMiddleware()),
+		app.userService,
+	)
 
 	// Prepare an endpoint for 'Not Found'.
 	app.api.All("*", func(c *fiber.Ctx) error {

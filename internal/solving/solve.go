@@ -8,7 +8,7 @@ import (
 	"github.com/ChernichenkoStephan/mvthbot/internal/utils"
 )
 
-func Solve(equation []string, variables VMap) (float64, error) {
+func Solve(equation []string, variables map[string]float64) (float64, error) {
 	stack := []float64{}
 	var l, r float64
 	var ok bool

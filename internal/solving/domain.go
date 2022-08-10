@@ -24,5 +24,3 @@ type StatementDTO struct {
 	// example: a = b = 2 + 2 >> Equation = "2 + 2"
 	Equation string
 }
-
-type VMap map[string]float64

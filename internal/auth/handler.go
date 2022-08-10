@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -68,7 +69,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClaims{
-		request.Password,
+		fmt.Sprintf("%d", id),
 		request.Username,
 		jwt.StandardClaims{
 			Audience:  "mvthbot users",

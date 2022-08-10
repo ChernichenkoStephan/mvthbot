@@ -123,17 +123,14 @@ func (repo *IMVariableRepository) CreateUserVariables(
 	ctx context.Context,
 	userID int64,
 	names []string,
-	values []float64,
+	value float64,
 ) error {
 
 	repo.mx.Lock()
 	defer repo.mx.Unlock()
-	if len(names) != len(values) {
-		return fmt.Errorf("Length of names and values doesn't match")
-	}
 
 	for i := 0; i < len(names); i++ {
-		err := repo.db.addVariable(names[i], values[i], userID)
+		err := repo.db.addVariable(names[i], value, userID)
 		if err != nil {
 			return fmt.Errorf("MultyAdd error")
 		}

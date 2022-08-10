@@ -31,6 +31,7 @@ type UserService interface {
 	SetUser(ctx context.Context, user *User) error
 	DeleteUser(ctx context.Context, userID int64) error
 
+	AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error
 	FetchHistory(ctx context.Context, userID int64) (*[]solv.Statement, error)
 	ClearHistory(ctx context.Context, userID int64) error
 }
@@ -49,14 +50,14 @@ type UserRepository interface {
 
 type VariableService interface {
 	AddUserVariable(ctx context.Context, userID int64, name string, value float64) error
-	AddUserVariables(ctx context.Context, userID int64, name []string, value []float64) error
+	AddUserVariables(ctx context.Context, userID int64, names []string, value float64) error
 
 	FetchUserVariable(ctx context.Context, userID int64, name string) (float64, error)
 	FetchUserVariables(ctx context.Context, userID int64, names []string) (VMap, error)
 	FetchAllUserVariables(ctx context.Context, userID int64) (VMap, error)
 
 	SetUserVariable(ctx context.Context, userID int64, name string, value float64) error
-	SetUserVariables(ctx context.Context, userID int64, name []string, value []float64) error
+	SetUserVariables(ctx context.Context, userID int64, names []string, value float64) error
 
 	DeleteUserVariable(ctx context.Context, userID int64, name string) error
 	ClearUserVariables(ctx context.Context, userID int64) error
@@ -64,7 +65,7 @@ type VariableService interface {
 
 type VariableRepository interface {
 	CreateUserVariable(ctx context.Context, userID int64, name string, value float64) error
-	CreateUserVariables(ctx context.Context, userID int64, names []string, values []float64) error
+	CreateUserVariables(ctx context.Context, userID int64, names []string, values float64) error
 
 	GetUserVariable(ctx context.Context, userID int64, name string) (float64, error)
 	GetUserVariables(ctx context.Context, userID int64, names []string) (VMap, error)

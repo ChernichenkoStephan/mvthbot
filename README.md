@@ -3,12 +3,12 @@ Math solving service
 
 ## Features
 
-- [x] Equasion solving
+- [x] Equation solving
     - [x] Reverse Polish notation conversion
     - [x] Variables support
 - [ ] REST API (using Fiber)
-    - [ ] Middleware
-    - [ ] Auth (using JWT)
+    - [x] Middleware
+    - [x] Auth (using JWT)
     - [ ] OpenAPI (using Swagger)
 - [ ] Telegram bot (using tucnak/telebot)
     - [ ] Broadcasting
@@ -28,6 +28,7 @@ Math solving service
 - [ ] Full Deploy (using Dockercompose)
 - [ ] Advanced Testing
 - [ ] CL/CI
+- [ ] Rewrite DB with codegen (somewhere in future)
 
 ## API
 
@@ -77,7 +78,7 @@ auth
 
     [DELETE] api/v1/variables/a
 
-    [DELETE] api/v1/variables
+    [POST] api/v1/variables
     {
         names:["a", "b"]
     }
@@ -92,19 +93,17 @@ auth
 
 ## Bot
 
-    /key
+    /s 1+2
 
-    /slv 1+2
+    /s a = 2 + 2
 
-    /set a = 2 + 2
-
-    /set a = 2+2
+    /s a = 2+2
     b = 3 + 3
     c = 1 + 1
 
-    /set a = b = 1+1
+    /s a = b = 1+1
 
-    /set a = b
+    /s a = b
 
     /get a
 
@@ -112,15 +111,25 @@ auth
 
     /del a b
 
-    /clear
+    /delall yes
 
-    /history
+### History
+    /hist
 
     **Output:**
     1+2
     a = 2+2
     4-1
     a = b = 2+3
+
+    
+    /clear yes
+
+
+### Auth
+    /password
+    /genpassword yes
+
 
 
 

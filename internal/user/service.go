@@ -55,12 +55,20 @@ func (us userService) DeleteUser(ctx context.Context, userID int64) error {
 	return nil
 }
 
+func (us userService) AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error {
+	err := us.userReposiory.AddStatement(ctx, userID, statement)
+	if err != nil {
+		return fmt.Errorf("Got error from db: %v", err)
+	}
+	return nil
+}
+
 func (us userService) FetchHistory(ctx context.Context, userID int64) (*[]solv.Statement, error) {
 	h, err := us.userReposiory.GetHistory(ctx, userID)
 	if err != nil {
-		return h, fmt.Errorf("Got error from db: %v", err)
+		return &[]solv.Statement{}, fmt.Errorf("Got error from db: %v", err)
 	}
-	return &[]solv.Statement{}, nil
+	return h, nil
 }
 
 func (us userService) ClearHistory(ctx context.Context, userID int64) error {
@@ -70,6 +78,12 @@ func (us userService) ClearHistory(ctx context.Context, userID int64) error {
 	}
 	return nil
 }
+
+//
+//
+// Variables part
+//
+//
 
 type variableService struct {
 	variableReposiory VariableRepository
@@ -87,8 +101,8 @@ func (us variableService) AddUserVariable(ctx context.Context, userID int64, nam
 	return nil
 }
 
-func (us variableService) AddUserVariables(ctx context.Context, userID int64, name []string, value []float64) error {
-	err := us.variableReposiory.CreateUserVariables(ctx, userID, name, value)
+func (us variableService) AddUserVariables(ctx context.Context, userID int64, names []string, value float64) error {
+	err := us.variableReposiory.CreateUserVariables(ctx, userID, names, value)
 	if err != nil {
 		return fmt.Errorf("Got error from db: %v", err)
 	}
@@ -127,7 +141,11 @@ func (us variableService) SetUserVariable(ctx context.Context, userID int64, nam
 	return nil
 }
 
-func (us variableService) SetUserVariables(ctx context.Context, userID int64, names []string, values []float64) error {
+func (us variableService) SetUserVariables(ctx context.Context, userID int64, names []string, value float64) error {
+	values := make([]float64, len(names))
+	for i := range names {
+		values[i] = value
+	}
 	err := us.variableReposiory.UpdateUserVariables(ctx, userID, names, values)
 	if err != nil {
 		return fmt.Errorf("Got error from db: %v", err)
