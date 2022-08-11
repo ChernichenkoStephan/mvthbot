@@ -16,6 +16,7 @@ A service-bot with users, variables, and calculation history support to solve eq
 - [ ] Telegram bot (using tucnak/telebot)
     - [ ] Broadcasting
     - [ ] Middleware
+    - [x] Commands set
 - [ ] error handling (using emperror.dev/emperror)
 - [ ] logging (using zap)
 - [ ] Database
@@ -203,8 +204,8 @@ A service-bot with users, variables, and calculation history support to solve eq
 	
 	    /s 1+2
 	    
-			 **Output:**
-			 3
+         **Output:**
+         3
 	    
 	*Solve with user variables set:*
 	

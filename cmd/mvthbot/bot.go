@@ -15,7 +15,7 @@ func setupBot(app *App) error {
 
 	b := app.bot.Client()
 
-	b.Use(tg.ArgDividerConvertor)
+	b.Use(tg.ArgParse)
 
 	b.Handle(tele.OnText, func(c tele.Context) error {
 		ch := make(chan error)
