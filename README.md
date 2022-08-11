@@ -57,7 +57,9 @@ A service-bot with users, variables, and calculation history support to solve eq
 
 ## Prerequisites
 
-> List
+* Golang (version `unknown`)
+* Docker (version `unknown`)
+* PostgreSQL (version `unknown`)
 
 ## Installation
 
@@ -101,9 +103,6 @@ A service-bot with users, variables, and calculation history support to solve eq
 | GET | api/v1/auth/history | none | getting all history of equations for user |
 | DELETE | api/v1/auth/history | none | clearing user history |
    
-
-
-
 ### Auth
 
 [POST] api/v1/auth/login/

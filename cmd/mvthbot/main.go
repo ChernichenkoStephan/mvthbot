@@ -27,8 +27,7 @@ func main() {
 
 		// Run Bot
 		g.Go(func() error {
-			// return runBot(app)
-			return nil
+			return runBot(app)
 		})
 
 		return g.Wait()

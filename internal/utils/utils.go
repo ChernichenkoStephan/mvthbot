@@ -36,3 +36,7 @@ func Pop[T any](stack []T) (T, []T) {
 	stack = stack[:len(stack)-1]
 	return op, stack
 }
+
+func GenPassword() string {
+	return "password"
+}

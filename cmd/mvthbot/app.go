@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/go-faster/errors"
 
@@ -9,6 +10,8 @@ import (
 	tg "github.com/ChernichenkoStephan/mvthbot/internal/bot"
 	"github.com/ChernichenkoStephan/mvthbot/internal/user"
 	"github.com/gofiber/fiber/v2"
+
+	tele "gopkg.in/telebot.v3"
 )
 
 type App struct {
@@ -44,7 +47,19 @@ func InitApp( /*metrics logger db*/ ) (*App, error) {
 	us := user.NewUserService(ur)
 	vs := user.NewVariableService(vr)
 
-	b := tg.NewBot()
+	// TODO Token from Viper
+	pref := tele.Settings{
+		Token:  "5597673919:AAGdW5TVuWkFkvCf87knskCPlg7HUoipSTY",
+		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
+	}
+
+	c, err := tele.NewBot(pref)
+	if err != nil {
+		log.Fatal(err)
+		return nil, errors.Wrap(err, "Error during Telegram bot setup")
+	}
+
+	b := tg.NewBot(c, us, vs)
 
 	app := &App{
 		api: api,
@@ -60,15 +75,21 @@ func InitApp( /*metrics logger db*/ ) (*App, error) {
 	}
 
 	// DB setup
-	err := setupDB(app)
+	err = setupDB(app)
 	if err != nil {
-		return nil, errors.Wrap(err, "DB setup")
+		return nil, errors.Wrap(err, "Error during DB setup")
 	}
 
 	// API setup
 	err = setupAPI(app)
 	if err != nil {
-		return nil, errors.Wrap(err, "API setup")
+		return nil, errors.Wrap(err, "Error during API setup")
+	}
+
+	// Telegram bot setup
+	err = setupBot(app)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error during Telegram bot setup")
 	}
 
 	return app, nil
