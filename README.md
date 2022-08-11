@@ -1,6 +1,6 @@
 # mvthbot
 
-![mvthbot header picture](/robot.jpeg "mvthbot")
+![mvthbot header picture](assets/robot.jpeg "mvthbot")
 
 A service-bot with users, variables, and calculation history support to solve equations in text format, to help with calculations in chats. With an open API for interacting with other services and registering via telegram.
 
