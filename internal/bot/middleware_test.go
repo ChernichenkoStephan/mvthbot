@@ -20,6 +20,70 @@ func equals(l []solving.Statement, r []solving.Statement) bool {
 	return true
 }
 
+func TestParserBasicRawEquation(t *testing.T) {
+	input := "2 + 2"
+	ref := []s.Statement{{
+		Variables: []string{},
+		Equation:  "2+2",
+	}}
+	res := parseStatements(input)
+	if !equals(res, ref) {
+		t.Errorf("got %v\nwanted %v", res, ref)
+	}
+}
+
+func TestParserSingleVarRawEquation(t *testing.T) {
+	input := "a = 2 + 2"
+	ref := []s.Statement{{
+		Variables: []string{"a"},
+		Equation:  "2+2",
+	}}
+	res := parseStatements(input)
+	if !equals(res, ref) {
+		t.Errorf("got %v\nwanted %v", res, ref)
+	}
+}
+
+func TestParserMultiVarRawEquation(t *testing.T) {
+	input := "a = b= c =2 + 2"
+	ref := []s.Statement{{
+		Variables: []string{"a", "b", "c"},
+		Equation:  "2+2",
+	}}
+	res := parseStatements(input)
+	if !equals(res, ref) {
+		t.Errorf("got %v\nwanted %v", res, ref)
+	}
+}
+
+func TestParserMultiLineVarRawEquation(t *testing.T) {
+	input := "a = b= c =2 + 2\n1+1\ne=3+3"
+	ref := []s.Statement{
+		{
+			Variables: []string{"a", "b", "c"},
+			Equation:  "2+2",
+		},
+		{
+			Variables: []string{},
+			Equation:  "1+1",
+		},
+		{
+			Variables: []string{"e"},
+			Equation:  "3+3",
+		},
+	}
+	res := parseStatements(input)
+	if !equals(res, ref) {
+		t.Errorf("got %v\nwanted %v", res, ref)
+	}
+}
+
+//
+//
+// Solve command testing
+//
+//
+
 func TestParserBasicSolve(t *testing.T) {
 	input := "/s 2 + 2"
 	ref := []s.Statement{{

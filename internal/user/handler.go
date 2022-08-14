@@ -48,7 +48,7 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 		})
 	}
 
-	vs, err := h.variableService.FetchAllUserVariables(context.TODO(), uID)
+	vs, err := h.variableService.GetAll(context.TODO(), uID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -62,7 +62,7 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.variableService.AddUserVariable(context.TODO(), uID, n, res)
+	err = h.variableService.Add(context.TODO(), uID, n, res)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -112,7 +112,7 @@ func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 		})
 	}
 
-	vs, err := h.variableService.FetchAllUserVariables(context.TODO(), uID)
+	vs, err := h.variableService.GetAll(context.TODO(), uID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -148,11 +148,15 @@ func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 			})
 		}
 
-		err = h.variableService.AddUserVariables(context.TODO(), uID, st.Names, res)
+		err = h.variableService.AddWithNames(context.TODO(), uID, st.Names, res)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),
 			})
+		}
+
+		for _, n := range st.Names {
+			vs[n] = res
 		}
 	}
 
@@ -165,7 +169,7 @@ func (h *variableHandler) GetVariable(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	n := c.Params("name")
 
-	v, err := h.variableService.FetchUserVariable(context.TODO(), uID, n)
+	v, err := h.variableService.Get(context.TODO(), uID, n)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -197,7 +201,7 @@ func (h *variableHandler) GetVariables(c *fiber.Ctx) error {
 		})
 	}
 
-	vars, err := h.variableService.FetchUserVariables(context.TODO(), uID, req.Names)
+	vars, err := h.variableService.GetWithNames(context.TODO(), uID, req.Names)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -214,7 +218,7 @@ func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 	n := c.Params("name")
 
 	if n == "" {
-		err := h.variableService.ClearUserVariables(context.TODO(), uID)
+		err := h.variableService.DeleteAll(context.TODO(), uID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),
@@ -222,7 +226,7 @@ func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 		}
 	}
 
-	err := h.variableService.DeleteUserVariable(context.TODO(), uID, n)
+	err := h.variableService.Delete(context.TODO(), uID, n)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -237,7 +241,7 @@ func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 func (h *variableHandler) DeleteAllVariables(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 
-	if err := h.variableService.ClearUserVariables(context.TODO(), uID); err != nil {
+	if err := h.variableService.DeleteAll(context.TODO(), uID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
@@ -270,7 +274,7 @@ func NewHistoryHandler(userRoute fiber.Router, us UserService) {
 func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 
-	hist, err := h.userService.FetchHistory(context.TODO(), uID)
+	hist, err := h.userService.GetHistory(context.TODO(), uID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -283,7 +287,7 @@ func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 
 func (h *historyHandler) DeleteHistory(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
-	if err := h.userService.ClearHistory(context.TODO(), uID); err != nil {
+	if err := h.userService.DeleteHistory(context.TODO(), uID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})

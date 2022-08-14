@@ -15,19 +15,25 @@ func setupBot(app *App) error {
 
 	b := app.bot.Client()
 
+	b.Use(tg.Log)
+	b.Use(tg.UserCheck(app.userService))
 	b.Use(tg.ArgParse)
 
 	b.Handle(tele.OnText, func(c tele.Context) error {
 		ch := make(chan error)
-		go app.bot.HandleAll(context.TODO(), c, ch)
+		go app.bot.HandleDefault(context.TODO(), c, ch)
 		return <-ch
 	})
 
-	commands := make([]tele.Command, len(*app.bot.BaseCommands()))
-	for i, cmd := range *app.bot.BaseCommands() {
+	commands := make([]tele.Command, 0)
+	for _, cmd := range *app.bot.BaseCommands() {
 		log.Printf("Setting '%s' command\n", cmd.Meta.Text)
+
 		b.Handle(cmd.Meta.Text, tg.NewTeleHandler(cmd.Handler))
-		commands[i] = cmd.Meta
+
+		if !cmd.IsParameterized {
+			commands = append(commands, cmd.Meta)
+		}
 	}
 
 	return b.SetCommands(commands)

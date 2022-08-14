@@ -2,16 +2,21 @@ package auth
 
 import "context"
 
+type loginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 type IDGetter interface {
 	GetUserID(username string) (int64, error)
 }
 
-type UserAuthRepository interface {
+type AuthRepository interface {
 	GetPassword(ctx context.Context, id int64) (string, error)
 }
 
 type AuthHandler struct {
-	repository UserAuthRepository
+	repository AuthRepository
 	idGetter   IDGetter
 }
 

@@ -1,9 +1,12 @@
 package bot
 
 import (
+	"context"
+	"log"
 	"strings"
 
 	slv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
+	"github.com/ChernichenkoStephan/mvthbot/internal/user"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -17,13 +20,16 @@ func parseStatements(input string) []slv.Statement {
 	// End of command
 	comInd := strings.IndexAny(lines[0], " ")
 
-	// For no arg command
-	if comInd == -1 {
-		return statements
-	}
+	// If it is command
+	if lines[0][:1] == "/" {
+		// For no arg command
+		if comInd == -1 {
+			return statements
+		}
 
-	// Removing command from first line
-	lines[0] = lines[0][comInd:]
+		// Removing command from first line
+		lines[0] = lines[0][comInd:]
+	}
 
 	// Parsing all lines
 	var vars []string
@@ -46,13 +52,43 @@ func parseStatements(input string) []slv.Statement {
 		})
 
 	}
+
 	return statements
 }
 
 func ArgParse(next tele.HandlerFunc) tele.HandlerFunc {
 	return func(c tele.Context) error {
+		log.Printf("Parsing %v", c.Message().Text)
 		sts := parseStatements(c.Message().Text)
 		c.Set("statements", sts)
 		return next(c)
 	}
+}
+
+func Log(next tele.HandlerFunc) tele.HandlerFunc {
+	return func(c tele.Context) error {
+		log.Printf("Message from '%v' with text '%v' in '%v'", c.Sender().ID, c.Text(), c.Chat().Type)
+		return next(c)
+	}
+}
+
+func UserCheck(userService user.UserService) tele.MiddlewareFunc {
+	return func(next tele.HandlerFunc) tele.HandlerFunc {
+		return func(c tele.Context) error {
+			if c.Chat().Type != "channel" {
+				ctx := context.TODO()
+				ok, err := userService.Exist(ctx, c.Message().Sender.ID)
+				if err != nil {
+					// TODO fix this
+					ok = true
+				}
+				if !ok {
+					u := user.NewUser(c.Message().Sender.ID)
+					userService.Add(ctx, u)
+				}
+			}
+			return next(c)
+		}
+	}
+
 }

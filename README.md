@@ -14,8 +14,8 @@ A service-bot with users, variables, and calculation history support to solve eq
     - [x] Auth (using JWT)
     - [ ] OpenAPI (using Swagger)
 - [ ] Telegram bot (using tucnak/telebot)
-    - [ ] Broadcasting
-    - [ ] Middleware
+    - [x] Broadcasting
+    - [x] Middleware
     - [x] Commands set
 - [ ] error handling (using emperror.dev/emperror)
 - [ ] logging (using zap)
@@ -29,9 +29,12 @@ A service-bot with users, variables, and calculation history support to solve eq
 - [ ] support for multiple server/daemon instances (using oklog/run)
 - [ ] messaging (using ThreeDotsLabs/watermill)
 - [ ] configuration (using spf13/viper)
+- [ ] Nginx
 - [ ] Dashboard (using GoAdminGroup/go-admin)
 - [ ] Full Deploy (using Dockercompose)
 - [ ] Advanced Testing
+    - Coverage increase
+    - Load testing
 - [ ] CL/CI
 - [ ] Rewrite DB with codegen (somewhere in future)
 
@@ -271,7 +274,7 @@ A service-bot with users, variables, and calculation history support to solve eq
 	     Success
 	     Fault <Not found>
 
-*  `/delall yes` **Delete all user variables command.**
+*  `/delall` **Delete all user variables command.**
 
  	     **Output variants:**
 	     Success
@@ -287,7 +290,7 @@ A service-bot with users, variables, and calculation history support to solve eq
 		    4-1
 		    a = b = 2+3
 
-* `/clear yes` 	**Clears user history and variables**
+* `/clear` 	**Clears user history and variables**
 
 			**Output variants:**
 			Success
@@ -298,7 +301,7 @@ A service-bot with users, variables, and calculation history support to solve eq
 		**Output:**
 		eifjkvncqe;dow
 
-* `/genpassword yes` **Revokes or generates password for accessing through REST API**
+* `/genpassword` **Revokes or generates password for accessing through REST API**
 
 		**Output:**
 		eifjkvncqe;dow

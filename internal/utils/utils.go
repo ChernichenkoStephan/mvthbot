@@ -1,6 +1,12 @@
 package utils
 
-import "strings"
+import (
+	"math/rand"
+	"strings"
+	"time"
+
+	"golang.org/x/exp/utf8string"
+)
 
 var runeMap map[string]string = map[string]string{
 	"%21": "!",
@@ -37,6 +43,19 @@ func Pop[T any](stack []T) (T, []T) {
 	return op, stack
 }
 
-func GenPassword() string {
-	return "password"
+func GenPassword(length int) string {
+	s := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	rand.Seed(time.Now().UnixNano())
+	valid := utf8string.NewString(s)
+	var (
+		min = 0
+		max = len(s) - 1
+	)
+
+	buffer := make([]rune, length)
+	for i := 0; i < length; i++ {
+		buffer[i] = valid.At(rand.Intn(max-min) + min)
+	}
+
+	return string(buffer)
 }

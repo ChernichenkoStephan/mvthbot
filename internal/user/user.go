@@ -2,12 +2,10 @@ package user
 
 import (
 	"fmt"
-
-	solv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
 )
 
 func (u User) Copy() *User {
-	h := make([]solv.Statement, 1)
+	h := make(History, 0)
 	vs := make(map[string]float64)
 	for _, s := range *u.History {
 		h = append(h, *s.Copy())
@@ -25,4 +23,19 @@ func (u User) Copy() *User {
 func (u User) String() string {
 	return fmt.Sprintf("{\n\tID: %d,\n\tHistory: %v,\n\tVariables: %v\n}",
 		u.ID, u.History, u.Variables)
+}
+
+func NewUser(id int64) *User {
+	h := make(History, 0)
+	vs := make(map[string]float64)
+
+	return &User{
+		ID:        id,
+		History:   &h,
+		Variables: vs,
+	}
+}
+
+func (u User) Recipient() string {
+	return fmt.Sprintf("%v", u.ID)
 }

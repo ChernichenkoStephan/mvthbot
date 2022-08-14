@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
-func NewAuthHandler(authRoute fiber.Router, repo UserAuthRepository, getter IDGetter) {
+func NewAuthHandler(authRoute fiber.Router, repo AuthRepository, getter IDGetter) {
 	handler := &AuthHandler{
 		repository: repo,
 		idGetter:   getter,
@@ -23,10 +24,6 @@ func NewAuthHandler(authRoute fiber.Router, repo UserAuthRepository, getter IDGe
 }
 
 func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
-	type loginRequest struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
 
 	type jwtClaims struct {
 		UserID string `json:"uid"`
@@ -36,13 +33,17 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 
 	request := &loginRequest{}
 	if err := c.BodyParser(request); err != nil {
+		log.Printf("[signInUser] parsing error")
 		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"status":  "fail",
 			"message": err.Error(),
 		})
 	}
+	log.Printf("[signInUser] request: %v", request.Username)
 
 	id, err := strconv.ParseInt(request.Username, 0, 64)
+
+	// if got id in request
 	if err != nil {
 		id, err = h.idGetter.GetUserID(request.Username)
 		if err != nil {
@@ -55,6 +56,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 
 	pass, err := h.repository.GetPassword(context.TODO(), id)
 	if err != nil {
+		log.Printf("User password error")
 		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"status":  "fail",
 			"message": err.Error(),
@@ -80,6 +82,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 
 	signedToken, err := token.SignedString([]byte(_TEST_SECRET))
 	if err != nil {
+		log.Printf("Token generation fault")
 		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"status":  "fail",
 			"message": err.Error(),
@@ -95,6 +98,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 		HTTPOnly: true,
 	})
 
+	log.Printf("'%v' Login success", request.Username)
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"status": "success",
 		"token":  signedToken,

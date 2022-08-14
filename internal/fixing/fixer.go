@@ -13,15 +13,19 @@ var _ERROR_CASES map[string]string = map[string]string{
 
 type FixFunc func(line string) string
 
-type Fixer struct {
+type Fixer interface {
+	Fix(line string) string
+}
+
+type BaseFixer struct {
 	fixes []FixFunc
 }
 
-func (f *Fixer) Handle(fix FixFunc) {
+func (f *BaseFixer) Handle(fix FixFunc) {
 	f.fixes = append(f.fixes, fix)
 }
 
-func (f Fixer) Fix(equation string) string {
+func (f BaseFixer) Fix(equation string) string {
 	res := equation
 	for _, fx := range f.fixes {
 		res = fx(res)
@@ -29,8 +33,8 @@ func (f Fixer) Fix(equation string) string {
 	return res
 }
 
-func New() *Fixer {
-	return &Fixer{[]FixFunc{fixSpaces, fixErrors}}
+func New() *BaseFixer {
+	return &BaseFixer{[]FixFunc{fixSpaces, fixErrors}}
 }
 
 func fixSpaces(equation string) string {

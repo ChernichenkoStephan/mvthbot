@@ -8,6 +8,7 @@ import (
 
 	"github.com/ChernichenkoStephan/mvthbot/internal/auth"
 	tg "github.com/ChernichenkoStephan/mvthbot/internal/bot"
+	"github.com/ChernichenkoStephan/mvthbot/internal/fixing"
 	"github.com/ChernichenkoStephan/mvthbot/internal/user"
 	"github.com/gofiber/fiber/v2"
 
@@ -29,7 +30,7 @@ type App struct {
 	// Repositories
 	userRepository     user.UserRepository
 	variableRepository user.VariableRepository
-	authRepository     auth.UserAuthRepository
+	authRepository     auth.AuthRepository
 }
 
 func InitApp( /*metrics logger db*/ ) (*App, error) {
@@ -40,9 +41,12 @@ func InitApp( /*metrics logger db*/ ) (*App, error) {
 		ServerHeader: "Fiber",
 	})
 
-	ur := user.NewImdbUserRepository()
-	vr := user.NewImdbVariableRepository()
-	ar := auth.NewUserAuthRepository()
+	// TODO change to normal
+	cache := user.GetTestCache(time.Hour, time.Hour)
+
+	ur := user.NewUserRepository(cache)
+	vr := user.NewVariableRepository(cache)
+	ar := auth.NewAuthRepository(cache)
 
 	us := user.NewUserService(ur)
 	vs := user.NewVariableService(vr)
@@ -51,6 +55,9 @@ func InitApp( /*metrics logger db*/ ) (*App, error) {
 	pref := tele.Settings{
 		Token:  "5597673919:AAGdW5TVuWkFkvCf87knskCPlg7HUoipSTY",
 		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
+		OnError: func(err error, c tele.Context) {
+			log.Printf("Got error: %v", err)
+		},
 	}
 
 	c, err := tele.NewBot(pref)
@@ -59,7 +66,8 @@ func InitApp( /*metrics logger db*/ ) (*App, error) {
 		return nil, errors.Wrap(err, "Error during Telegram bot setup")
 	}
 
-	b := tg.NewBot(c, us, vs)
+	f := fixing.New()
+	b := tg.NewBot(c, us, vs, f)
 
 	app := &App{
 		api: api,

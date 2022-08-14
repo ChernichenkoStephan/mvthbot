@@ -1,31 +1,6 @@
 package user
 
-import (
-	"fmt"
-
-	"github.com/ChernichenkoStephan/mvthbot/internal/solving"
-)
-
-type IMStorage struct {
-	data map[int64]*User
-}
-
-var _defaultUser *User = &User{
-	ID:        11111,
-	Password:  "password",
-	History:   &[]solving.Statement{},
-	Variables: VMap{},
-}
-
-var _default *IMStorage = &IMStorage{
-	data: map[int64]*User{
-		_defaultUser.ID: _defaultUser,
-	},
-}
-
-func GetDefaultStorage() *IMStorage {
-	return _default
-}
+/*
 
 func (s *IMStorage) addUser(u *User) {
 	s.data[u.ID] = u.Copy()
@@ -134,3 +109,5 @@ func (s *IMStorage) deleteHistory(userID int64) error {
 	}
 	return fmt.Errorf("UserNotFound")
 }
+
+*/

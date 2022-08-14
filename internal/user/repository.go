@@ -3,238 +3,281 @@ package user
 import (
 	"context"
 	"fmt"
-	"sync"
+	"time"
 
 	solv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
 )
 
-type IMUserRepository struct {
-	mx sync.Mutex
-	db *IMStorage
-}
-
-func NewImdbUserRepository() *IMUserRepository {
-	db := GetDefaultStorage()
-	return &IMUserRepository{
-		db: db,
-	}
-}
-
-func (repo *IMUserRepository) GetUsers(ctx context.Context) (*[]User, error) {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	resp := repo.db.getUsers()
-	return resp, nil
-}
-
-func (repo *IMUserRepository) GetUser(ctx context.Context, userID int64) (*User, error) {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	u, ok := repo.db.getUser(userID)
+func getUserFromCache(cache *Cache, uID int64) (*User, error) {
+	it, ok := cache.Get(fmt.Sprintf("%v", uID))
 	if !ok {
-		return &User{}, fmt.Errorf("UserNotFound")
+		return nil, fmt.Errorf("UserNotFound")
 	}
+
+	u, ok := it.(*User)
 	return u, nil
 }
 
-func (repo *IMUserRepository) AddUser(ctx context.Context, user *User) error {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	repo.db.addUser(user)
+func addUserToCache(cache *Cache, user *User) error {
+	cache.Set(fmt.Sprintf("%v", user.ID), user, time.Hour)
 	return nil
 }
 
-func (repo *IMUserRepository) UpdateUser(ctx context.Context, user *User) error {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	err := repo.db.updateUser(user)
+type userRepository struct {
+	cache *Cache
+	// db *Connection
+}
+
+func NewUserRepository(c *Cache) *userRepository {
+	return &userRepository{
+		cache: c,
+		//db: db,
+	}
+}
+
+func (repo *userRepository) GetAll(ctx context.Context) (*[]User, error) {
+	return nil, fmt.Errorf("Method forbidden.")
+}
+
+func (repo *userRepository) Get(ctx context.Context, userID int64) (*User, error) {
+	u, err := getUserFromCache(repo.cache, userID)
+	if err != nil {
+		return nil, fmt.Errorf("UserNotFound")
+	}
+
+	return u, nil
+}
+
+func (repo *userRepository) Add(ctx context.Context, user *User) error {
+	addUserToCache(repo.cache, user)
+	return nil
+}
+
+func (repo *userRepository) Update(ctx context.Context, user *User) error {
+	repo.cache.Set(fmt.Sprintf("%v", user.ID), user, time.Hour)
+	return nil
+}
+
+func (repo *userRepository) Delete(ctx context.Context, userID int64) error {
+	err := repo.cache.Delete(fmt.Sprintf("%v", userID))
 	if err != nil {
 		return fmt.Errorf("UserNotFound")
 	}
 	return nil
 }
 
-func (repo *IMUserRepository) DeleteUser(ctx context.Context, userID int64) error {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	repo.db.deleteUser(userID)
-	return nil
-}
-
-func (repo *IMUserRepository) GetHistory(ctx context.Context, userID int64) (*[]solv.Statement, error) {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	h, err := repo.db.getHistory(userID)
+func (repo *userRepository) GetHistory(ctx context.Context, userID int64) (*History, error) {
+	u, err := getUserFromCache(repo.cache, userID)
 	if err != nil {
-		return &[]solv.Statement{}, fmt.Errorf("UserNotFound")
+		return nil, fmt.Errorf("UserNotFound")
 	}
-	return h, nil
+	return u.History, nil
 }
 
-func (repo *IMUserRepository) AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	err := repo.db.addStatement(userID, statement)
+func (repo *userRepository) AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error {
+	u, err := getUserFromCache(repo.cache, userID)
 	if err != nil {
 		return fmt.Errorf("UserNotFound")
 	}
+
+	*u.History = append(*u.History, *statement)
+
+	addUserToCache(repo.cache, u)
+
 	return nil
 }
 
-func (repo *IMUserRepository) DeleteHistory(ctx context.Context, userID int64) error {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	err := repo.db.deleteHistory(userID)
+func (repo *userRepository) DeleteHistory(ctx context.Context, userID int64) error {
+	u, err := getUserFromCache(repo.cache, userID)
 	if err != nil {
 		return fmt.Errorf("UserNotFound")
 	}
+
+	*u.History = make([]solv.Statement, 0)
+
+	addUserToCache(repo.cache, u)
+
 	return nil
 }
 
-//
-//
-//
-//
-//
-
-type IMVariableRepository struct {
-	mx sync.Mutex
-	db *IMStorage
+func (repo *userRepository) Exist(ctx context.Context, userID int64) bool {
+	return repo.cache.Exist(fmt.Sprintf("%v", userID))
 }
 
-func NewImdbVariableRepository() *IMVariableRepository {
-	db := GetDefaultStorage()
-	return &IMVariableRepository{
-		db: db,
-	}
-}
-
-func (repo *IMVariableRepository) CreateUserVariable(ctx context.Context, userID int64, name string, value float64) error {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	err := repo.db.addVariable(name, value, userID)
+func (repo *userRepository) Clear(ctx context.Context, userID int64) error {
+	u, err := getUserFromCache(repo.cache, userID)
 	if err != nil {
 		return fmt.Errorf("UserNotFound")
 	}
+
+	*u.History = make([]solv.Statement, 0)
+	u.Variables = make(VMap)
+
+	addUserToCache(repo.cache, u)
+
 	return nil
 }
 
-func (repo *IMVariableRepository) CreateUserVariables(
+//
+//
+//
+//
+//
+
+type variableRepository struct {
+	cache *Cache
+	// db *Connection
+}
+
+func NewVariableRepository(c *Cache) *variableRepository {
+	return &variableRepository{
+		cache: c,
+		//db: db,
+	}
+}
+
+func (repo *variableRepository) Add(ctx context.Context, userID int64, name string, value float64) error {
+	u, err := getUserFromCache(repo.cache, userID)
+	if err != nil {
+		return fmt.Errorf("UserNotFound")
+	}
+
+	u.Variables[name] = value
+
+	addUserToCache(repo.cache, u)
+
+	return nil
+}
+
+func (repo *variableRepository) AddWithNames(
 	ctx context.Context,
 	userID int64,
 	names []string,
 	value float64,
 ) error {
-
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-
-	for i := 0; i < len(names); i++ {
-		err := repo.db.addVariable(names[i], value, userID)
-		if err != nil {
-			return fmt.Errorf("MultyAdd error")
-		}
+	u, err := getUserFromCache(repo.cache, userID)
+	if err != nil {
+		return fmt.Errorf("UserNotFound")
 	}
+
+	for _, n := range names {
+		u.Variables[n] = value
+	}
+
+	addUserToCache(repo.cache, u)
 
 	return nil
 
 }
 
-func (repo *IMVariableRepository) GetUserVariable(ctx context.Context, userID int64, name string) (float64, error) {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	v, err := repo.db.getVariable(name, userID)
+func (repo *variableRepository) Get(ctx context.Context, userID int64, name string) (float64, error) {
+	u, err := getUserFromCache(repo.cache, userID)
 	if err != nil {
 		return 0.0, fmt.Errorf("UserNotFound")
 	}
+
+	v, ok := u.Variables[name]
+	if !ok {
+		return 0.0, fmt.Errorf("VariableNotFound")
+	}
+
 	return v, nil
 
 }
 
-func (repo *IMVariableRepository) GetUserVariables(
-	ctx context.Context,
-	userID int64,
-	names []string,
-) (VMap, error) {
+func (repo *variableRepository) GetAll(ctx context.Context, userID int64) (VMap, error) {
+	u, err := getUserFromCache(repo.cache, userID)
+	if err != nil {
+		return nil, fmt.Errorf("UserNotFound")
+	}
+	return u.Variables, nil
+}
 
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	vs := make(VMap)
+func (repo *variableRepository) GetWithNames(ctx context.Context, userID int64, names []string) (VMap, error) {
+	u, err := getUserFromCache(repo.cache, userID)
+	if err != nil {
+		return nil, fmt.Errorf("UserNotFound")
+	}
+
+	res := make(VMap)
 	for _, n := range names {
-		v, err := repo.db.getVariable(n, userID)
-		if err != nil {
-			return VMap{}, fmt.Errorf("Got error: %v", err)
+		v, ok := u.Variables[n]
+		if !ok {
+			return nil, fmt.Errorf("VariableNotFound")
 		}
-		vs[n] = v
+		res[n] = v
 	}
-	return vs, nil
+
+	return res, nil
+
 }
 
-func (repo *IMVariableRepository) GetAllUserVariables(ctx context.Context, userID int64) (VMap, error) {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	vs := make(VMap)
-	u, ok := repo.db.getUser(userID)
-	if !ok {
-		return VMap{}, fmt.Errorf("UserNotFound")
-	}
-
-	for n, v := range u.Variables {
-		vs[n] = v
-	}
-	return vs, nil
-}
-
-func (repo *IMVariableRepository) UpdateUserVariable(ctx context.Context, userID int64, name string, value float64) error {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	err := repo.db.updateVariable(name, value, userID)
+func (repo *variableRepository) Update(ctx context.Context, userID int64, name string, value float64) error {
+	u, err := getUserFromCache(repo.cache, userID)
 	if err != nil {
 		return fmt.Errorf("UserNotFound")
 	}
+
+	u.Variables[name] = value
+
+	addUserToCache(repo.cache, u)
+
 	return nil
 }
 
-func (repo *IMVariableRepository) UpdateUserVariables(
-	ctx context.Context,
-	userID int64,
-	names []string,
-	values []float64,
-) error {
-
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
+func (repo *variableRepository) UpdateWithNames(ctx context.Context, userID int64, names []string, values []float64) error {
 	if len(names) != len(values) {
-		return fmt.Errorf("Length of names and values doesn't match")
+		return fmt.Errorf("InputVarError")
 	}
-
-	for i := 0; i < len(names); i++ {
-		err := repo.db.updateVariable(names[i], values[i], userID)
-		if err != nil {
-			return fmt.Errorf("MultyAdd error")
-		}
-	}
-
-	return nil
-
-}
-
-func (repo *IMVariableRepository) DeleteUserVariable(ctx context.Context, userID int64, name string) error {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	err := repo.db.removeVariable(name, userID)
+	u, err := getUserFromCache(repo.cache, userID)
 	if err != nil {
-		return fmt.Errorf("Got error: %v", err)
+		return fmt.Errorf("UserNotFound")
 	}
+
+	for i, n := range names {
+		u.Variables[n] = values[i]
+	}
+
+	addUserToCache(repo.cache, u)
 	return nil
 }
 
-func (repo *IMVariableRepository) DeleteUserVariables(ctx context.Context, userID int64) error {
-	repo.mx.Lock()
-	defer repo.mx.Unlock()
-	err := repo.db.clearUserVariables(userID)
+func (repo *variableRepository) Delete(ctx context.Context, userID int64, name string) error {
+	u, err := getUserFromCache(repo.cache, userID)
 	if err != nil {
-		return fmt.Errorf("Got error: %v", err)
+		return fmt.Errorf("UserNotFound")
 	}
+
+	delete(u.Variables, name)
+
+	addUserToCache(repo.cache, u)
+
+	return nil
+}
+
+func (repo *variableRepository) DeleteWithNames(ctx context.Context, userID int64, names []string) error {
+	u, err := getUserFromCache(repo.cache, userID)
+	if err != nil {
+		return fmt.Errorf("UserNotFound")
+	}
+
+	for _, n := range names {
+		delete(u.Variables, n)
+	}
+
+	addUserToCache(repo.cache, u)
+	return nil
+}
+
+func (repo *variableRepository) DeleteAll(ctx context.Context, userID int64) error {
+	u, err := getUserFromCache(repo.cache, userID)
+	if err != nil {
+		return fmt.Errorf("UserNotFound")
+	}
+
+	u.Variables = make(VMap)
+
+	addUserToCache(repo.cache, u)
+
 	return nil
 }

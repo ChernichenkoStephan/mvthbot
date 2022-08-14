@@ -7,6 +7,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.36.0
 	github.com/gofiber/jwt/v3 v3.2.14
 	github.com/golang-jwt/jwt/v4 v4.4.2
+	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	gopkg.in/telebot.v3 v3.0.0
 )
