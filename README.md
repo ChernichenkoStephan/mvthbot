@@ -256,6 +256,17 @@ A service-bot with users, variables, and calculation history support to solve eq
 	    b = 2
 	    c = 1
 
+* `/getall` **Get all user variables values command;**
+    
+        /getall
+ 	     **Output**
+	     a = 1
+         
+         b = 2
+
+         c = 3
+	     
+
 * `/del` **Delete user variable command.**
 
 	*Simple*
