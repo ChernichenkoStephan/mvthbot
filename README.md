@@ -19,9 +19,9 @@ A service-bot with users, variables, and calculation history support to solve eq
         - [x] Middleware
         - [x] Commands set
     - [x] error handling (using emperror.dev/emperror)
-    - [ ] logging (using zap)
+    - [x] logging (using zap)
     - [ ] Database
-        - [ ] PostgreSQL (using xxx)
+        - [ ] PostgreSQL (using github.com/jackc/pgx)
         - [ ] Migrations (using Ansible)
     - [ ] configuration (using spf13/viper)
     - [ ] Deploy (using Docker and Makefile)
