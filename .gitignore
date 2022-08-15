@@ -20,7 +20,12 @@
 # Go workspace file
 go.work
 
+# Folder for unused files
 _arch
 
+# MacOs system filder
 .DS_Store
+
+# log files
+*.log*
 
