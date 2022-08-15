@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"emperror.dev/errors"
 	lex "github.com/ChernichenkoStephan/mvthbot/internal/lexemes"
 	"github.com/ChernichenkoStephan/mvthbot/internal/utils"
 )
@@ -13,16 +14,17 @@ func Solve(equation []string, variables map[string]float64) (float64, error) {
 	var l, r float64
 	var ok bool
 
-	for _, e := range equation {
-		if lex.IsLex(e) {
+	for _, element := range equation {
+		if lex.IsLex(element) {
 			r, stack = utils.Pop(stack)
-			f, _ := lex.GetMathOperation(e)
+			f, _ := lex.GetMathOperation(element)
 
-			switch t, _ := lex.GetLexType(e); t {
+			switch t, _ := lex.GetLexType(element); t {
 			case lex.SINGLE_PLACE_FUNC:
 				v, err := f(r)
 				if err != nil {
-					return 0.0, fmt.Errorf("WrongFunctionUsage")
+					msg := fmt.Sprintf("Wrong %s usage with param %f", element, r)
+					return 0.0, errors.Wrap(err, msg)
 				}
 				stack = append(stack, v)
 
@@ -30,26 +32,27 @@ func Solve(equation []string, variables map[string]float64) (float64, error) {
 				l, stack = utils.Pop(stack)
 				v, err := f(l, r)
 				if err != nil {
-					return 0.0, fmt.Errorf("WrongFunctionUsage")
+					msg := fmt.Sprintf("Wrong %s usage with params %f, %f", element, l, r)
+					return 0.0, errors.Wrap(err, msg)
 				}
 				stack = append(stack, v)
 
 			}
 		} else {
-			v, err := strconv.ParseFloat(e, 64)
+			v, err := strconv.ParseFloat(element, 64)
 			if err != nil {
-				v, ok = variables[e]
+				v, ok = variables[element]
 				if !ok {
-					return 0.0, fmt.Errorf("Unknown variable %s", e)
+					return 0.0, fmt.Errorf("Unknown variable %s", element)
 				}
 			}
 			stack = append(stack, v)
 		}
 	}
 
-	if len(stack) == 1 {
-		return stack[0], nil
+	if len(stack) != 1 {
+		return 0.0, fmt.Errorf("Uncorrect equation | stack %v", stack)
 	}
+	return stack[0], nil
 
-	return 0.0, fmt.Errorf("Uncorrect equation")
 }

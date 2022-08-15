@@ -3,6 +3,7 @@ package solving
 import (
 	"fmt"
 
+	"emperror.dev/errors"
 	"github.com/ChernichenkoStephan/mvthbot/internal/converting"
 	"github.com/ChernichenkoStephan/mvthbot/internal/utils"
 	"github.com/gofiber/fiber/v2"
@@ -28,16 +29,18 @@ func (h *solveHandler) HandleSolve(c *fiber.Ctx) error {
 
 	eq, err := converting.ToRPN(decoded)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Converting to RPN fail")
 	}
 
 	res, err := Solve(eq, map[string]float64{})
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Solving failed")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -49,9 +52,10 @@ func (h *solveHandler) HandleMultipleSolve(c *fiber.Ctx) error {
 	p := new(SolvePackDTO)
 
 	if err := c.BodyParser(p); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Body parsing failed")
 	}
 
 	vals := make([]float64, 0)
@@ -72,8 +76,14 @@ func (h *solveHandler) HandleMultipleSolve(c *fiber.Ctx) error {
 		vals = append(vals, val)
 	}
 
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+	c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"results": vals,
-		"errors":  errs,
+		"error":   errs,
 	})
+
+	if len(errs) != 0 {
+		return MultySolveError{errs}
+	}
+	return nil
+
 }

@@ -3,31 +3,31 @@ package bot
 import (
 	"context"
 	"fmt"
-	"log"
 
+	"emperror.dev/errors"
 	"github.com/ChernichenkoStephan/mvthbot/internal/utils"
+	"go.uber.org/zap"
 
 	tele "gopkg.in/telebot.v3"
 )
 
 func NewTeleHandler(f HandleFunc) tele.HandlerFunc {
 	return func(c tele.Context) error {
-		ch := make(chan error)
+		ch := make(chan error, 2)
 		go f(context.TODO(), c, ch)
 		err := <-ch
-		log.Println(err)
 		return err
 	}
 }
 
-func getDest(c tele.Context) tele.Recipient {
+func getDest(c tele.Context, lg *zap.SugaredLogger) (tele.Recipient, error) {
 	switch t := c.Chat().Type; t {
 	case "private":
-		return c.Sender()
+		return c.Sender(), nil
 	default:
-		log.Printf("[receaved] ChatType: %s", t)
+		//lg.Warnf("[receaved] ChatType: %s", t)
 	}
-	return nil
+	return nil, fmt.Errorf("Forbiden chat type %s", c.Chat().Type)
 }
 
 func (b *Bot) HandleDefault(ctx context.Context, c tele.Context, ch chan error) {
@@ -40,16 +40,17 @@ func (b *Bot) HandleDefault(ctx context.Context, c tele.Context, ch chan error) 
 		resp, err := b.process(ctx, dest.ID, c.Get("statements"))
 		if err != nil {
 			resp = err.Error()
+			ch <- errors.Wrap(err, "Statements processing failed")
 		}
 
-		t := err
 		_, err = b.client.Send(dest, resp)
 		if err != nil {
-			ch <- fmt.Errorf("Got: %v %v", err, t)
+			ch <- errors.Wrap(err, "Bot reply failed")
 		}
 	}
 
 	ch <- nil
+	close(ch)
 }
 
 // start command
@@ -57,249 +58,296 @@ func (b *Bot) HandleGreatings(ctx context.Context, c tele.Context, ch chan error
 	user := c.Sender()
 	_, err := b.client.Send(user, "Hi, let's go!")
 	if err != nil {
-		ch <- err
+		ch <- errors.Wrap(err, "Reply failed")
 	}
 	ch <- nil
 }
 
 // s command
 func (b *Bot) HandleSolve(ctx context.Context, c tele.Context, ch chan error) {
-	dest := getDest(c)
 
-	ctx = context.TODO()
-	resp, err := b.process(ctx, c.Sender().ID, c.Get("statements"))
-	if err != nil {
-		resp = err.Error()
+	if dest, err := getDest(c, b.logger); err == nil {
+
+		ctx = context.TODO()
+		resp, err := b.process(ctx, c.Sender().ID, c.Get("statements"))
+		if err != nil {
+			resp = err.Error()
+			ch <- errors.Wrap(err, "Statements processing failed")
+		}
+
+		_, err = b.client.Send(dest, resp)
+		if err != nil {
+			ch <- errors.Wrap(err, "Bot reply failed")
+		}
+
+		ch <- nil
+
+	} else {
+		ch <- errors.Wrap(err, "Get destination fail")
 	}
+	close(ch)
 
-	t := err
-	_, err = b.client.Send(dest, resp)
-	if err != nil {
-		ch <- fmt.Errorf("Got: %v %v", err, t)
-	}
-
-	ch <- nil
 }
 
 // get comamnd
 func (b *Bot) HandleGetVariables(ctx context.Context, c tele.Context, ch chan error) {
-	dest := getDest(c)
-	var resp string
+	if dest, err := getDest(c, b.logger); err == nil {
+		var resp string
 
-	ctx = context.TODO()
-	vs, err := b.variablesService.GetWithNames(ctx, c.Sender().ID, c.Args())
-	if err != nil {
-		resp = err.Error()
-	} else {
-		builder := NewOutputBuilder()
-		for n, v := range vs {
-			builder.WriteVariable(n)
-			builder.WriteValue(v)
-			builder.LineBreak()
+		ctx = context.TODO()
+		vs, err := b.variablesService.GetWithNames(ctx, c.Sender().ID, c.Args())
+		if err != nil {
+			ch <- errors.Wrap(err, "Error during getting user variables")
+			resp = err.Error()
+		} else {
+			builder := NewOutputBuilder()
+			for n, v := range vs {
+				builder.WriteVariable(n)
+				builder.WriteValue(v)
+				builder.LineBreak()
+			}
+			resp = builder.String()
 		}
-		resp = builder.String()
-	}
 
-	t := err
-	_, err = b.client.Send(dest, resp)
-	if err != nil {
-		ch <- fmt.Errorf("%s, %s", t, err)
+		_, err = b.client.Send(dest, resp)
+		if err != nil {
+			ch <- errors.Wrap(err, "Bot reply failed")
+		}
+
+		ch <- nil
+
+	} else {
+		ch <- errors.Wrap(err, "Get destination fail")
 	}
-	ch <- nil
+	close(ch)
 }
 
 // getall comamnd
 func (b *Bot) HandleGetAllVariables(ctx context.Context, c tele.Context, ch chan error) {
-	dest := getDest(c)
-	var resp string
+	if dest, err := getDest(c, b.logger); err == nil {
+		var resp string
 
-	ctx = context.TODO()
-	vs, err := b.variablesService.GetAll(ctx, c.Sender().ID)
-	if err != nil {
-		resp = err.Error()
-	} else {
-		builder := NewOutputBuilder()
-		for n, v := range vs {
-			builder.WriteVariable(n)
-			builder.WriteValue(v)
-			builder.LineBreak()
+		ctx = context.TODO()
+		vs, err := b.variablesService.GetAll(ctx, c.Sender().ID)
+		if err != nil {
+			ch <- errors.Wrap(err, "Error during getting user variables")
+			resp = err.Error()
+		} else {
+			builder := NewOutputBuilder()
+			for n, v := range vs {
+				builder.WriteVariable(n)
+				builder.WriteValue(v)
+				builder.LineBreak()
+			}
+			resp = builder.String()
 		}
-		resp = builder.String()
-	}
 
-	t := err
-	_, err = b.client.Send(dest, resp)
-	if err != nil {
-		ch <- fmt.Errorf("%s, %s", t, err)
+		_, err = b.client.Send(dest, resp)
+		if err != nil {
+			ch <- errors.Wrap(err, "Bot reply failed")
+		}
+
+		ch <- nil
+
+	} else {
+		ch <- errors.Wrap(err, "Get destination fail")
 	}
-	ch <- nil
+	close(ch)
 }
 
 // del command
 func (b *Bot) HandleDeleteVariables(ctx context.Context, c tele.Context, ch chan error) {
-	dest := getDest(c)
-	var resp string
+	if dest, err := getDest(c, b.logger); err == nil {
+		var resp string
 
-	ctx = context.TODO()
-	err := b.variablesService.DeleteWithNames(ctx, c.Sender().ID, c.Args())
-	if err != nil {
-		resp = err.Error()
+		ctx = context.TODO()
+		err := b.variablesService.DeleteWithNames(ctx, c.Sender().ID, c.Args())
+		if err != nil {
+			ch <- errors.Wrap(err, "Error during deleting user variables")
+			resp = err.Error()
+		} else {
+			resp = "Success"
+		}
+
+		_, err = b.client.Send(dest, resp)
+		if err != nil {
+			ch <- errors.Wrap(err, "Bot reply failed")
+		}
+
+		ch <- nil
+
 	} else {
-		resp = "Success"
+		ch <- errors.Wrap(err, "Get destination fail")
 	}
-
-	t := err
-	_, err = b.client.Send(dest, resp)
-	if err != nil {
-		ch <- fmt.Errorf("%s, %s", t, err)
-	}
-	ch <- nil
+	close(ch)
 }
 
 // delall comand
 func (b *Bot) HandleDeleteAllVariables(ctx context.Context, c tele.Context, ch chan error) {
-	dest := getDest(c)
-	var resp string
+	if dest, err := getDest(c, b.logger); err == nil {
+		var resp string
 
-	ctx = context.TODO()
-	err := b.variablesService.DeleteAll(ctx, c.Sender().ID)
-	if err != nil {
-		resp = err.Error()
+		ctx = context.TODO()
+		err := b.variablesService.DeleteAll(ctx, c.Sender().ID)
+		if err != nil {
+			ch <- errors.Wrap(err, "Error during deleting user variables")
+			resp = err.Error()
+		} else {
+			resp = "Success"
+		}
+
+		_, err = b.client.Send(dest, resp)
+		if err != nil {
+			ch <- errors.Wrap(err, "Bot reply failed")
+		}
+
 	} else {
-		resp = "Success"
+		ch <- errors.Wrap(err, "Get destination fail")
 	}
-
-	t := err
-	_, err = b.client.Send(dest, resp)
-	if err != nil {
-		ch <- fmt.Errorf("%s, %s", t, err)
-	}
-	ch <- nil
+	close(ch)
 }
 
 // hist command
 func (b *Bot) HandleGetHistory(ctx context.Context, c tele.Context, ch chan error) {
-	dest := getDest(c)
-	var resp string
+	if dest, err := getDest(c, b.logger); err == nil {
+		var resp string
 
-	ctx = context.TODO()
-	sts, err := b.userService.GetHistory(ctx, c.Sender().ID)
-	if err != nil {
-		resp = err.Error()
+		ctx = context.TODO()
+		sts, err := b.userService.GetHistory(ctx, c.Sender().ID)
+		if err != nil {
+			ch <- errors.Wrap(err, "Error during deleting user history")
+			resp = err.Error()
+		} else {
+			builder := NewOutputBuilder()
+			for _, s := range *sts {
+				builder.WriteFull(&s)
+			}
+			resp = builder.String()
+			if resp == "" {
+				resp = "empty"
+			}
+		}
+
+		_, err = b.client.Send(dest, resp)
+		if err != nil {
+			ch <- errors.Wrap(err, "Bot reply failed")
+		}
+
 	} else {
-		log.Printf("%v", *sts)
-		builder := NewOutputBuilder()
-		for _, s := range *sts {
-			builder.WriteFull(&s)
-		}
-		resp = builder.String()
-		if resp == "" {
-			resp = "empty"
-		}
+		ch <- errors.Wrap(err, "Get destination fail")
 	}
-
-	t := err
-	_, err = b.client.Send(dest, resp)
-	if err != nil {
-		ch <- fmt.Errorf("%s, %s", t, err)
-	}
-	ch <- nil
+	close(ch)
 }
 
 // clear command
 func (b *Bot) HandleClearAll(ctx context.Context, c tele.Context, ch chan error) {
-	dest := getDest(c)
-	var resp string
+	if dest, err := getDest(c, b.logger); err == nil {
+		var resp string
 
-	ctx = context.TODO()
-	err := b.userService.Clear(ctx, c.Sender().ID)
-	if err != nil {
-		resp = err.Error()
+		ctx = context.TODO()
+		err := b.userService.Clear(ctx, c.Sender().ID)
+		if err != nil {
+			ch <- errors.Wrap(err, "Error during clear user data")
+			resp = err.Error()
+		} else {
+			resp = "Success"
+		}
+
+		_, err = b.client.Send(dest, resp)
+		if err != nil {
+			ch <- errors.Wrap(err, "Bot reply failed")
+		}
+
 	} else {
-		resp = "Success"
+		ch <- errors.Wrap(err, "Get destination fail")
 	}
-
-	t := err
-	_, err = b.client.Send(dest, resp)
-	if err != nil {
-		ch <- fmt.Errorf("%s, %s", t, err)
-	}
-	ch <- nil
+	close(ch)
 }
 
 // password command
 func (b *Bot) HandleGetPassword(ctx context.Context, c tele.Context, ch chan error) {
-	dest := getDest(c)
-	var resp string
-	var err error
+	if dest, err := getDest(c, b.logger); err == nil {
+		var resp string
 
-	if c.Chat().Type == "private" {
+		if c.Chat().Type == "private" {
 
-		ctx = context.TODO()
-		u, err := b.userService.Get(ctx, c.Sender().ID)
-		if err != nil {
-			resp = err.Error()
-		} else {
-			if u.Password == "" {
-				resp = "No password. Generete one with /genpassword command"
+			ctx = context.TODO()
+			u, err := b.userService.Get(ctx, c.Sender().ID)
+			if err != nil {
+				ch <- errors.Wrap(err, "Error during geting user")
+				resp = err.Error()
 			} else {
-				resp = u.Password
+				if u.Password == "" {
+					resp = "No password. Generete one with /genpassword command"
+				} else {
+					resp = u.Password
+				}
 			}
+
+		} else {
+			resp = "Command forbiden, use only in private bot chat"
+		}
+
+		_, err = b.client.Send(dest, resp)
+		if err != nil {
+			ch <- errors.Wrap(err, "Bot reply failed")
 		}
 
 	} else {
-		resp = "Command forbiden, use only in private bot chat"
+		ch <- errors.Wrap(err, "Get destination fail")
 	}
-
-	t := err
-	_, err = b.client.Send(dest, resp)
-	if err != nil {
-		ch <- fmt.Errorf("%s, %s", t, err)
-	}
-	ch <- nil
+	close(ch)
 }
 
 // genpassword command
 func (b *Bot) HandleGeneratePassword(ctx context.Context, c tele.Context, ch chan error) {
-	dest := getDest(c)
-	var resp string
-	var err error
+	if dest, err := getDest(c, b.logger); err == nil {
+		var resp string
 
-	if c.Chat().Type == "private" {
+		if c.Chat().Type == "private" {
 
-		ctx = context.TODO()
-		u, err := b.userService.Get(ctx, c.Sender().ID)
-		if err != nil {
-			resp = err.Error()
+			ctx = context.TODO()
+			u, err := b.userService.Get(ctx, c.Sender().ID)
+			if err != nil {
+				ch <- errors.Wrap(err, "Error during geting user")
+				resp = err.Error()
+			} else {
+				// TODO fix to config
+				u.Password = utils.GenPassword(8)
+				resp = fmt.Sprintf("%v", u.Password)
+			}
+
 		} else {
-			// TODO fix to config
-			u.Password = utils.GenPassword(8)
-			resp = fmt.Sprintf("%v", u.Password)
+			resp = "Command forbiden, use only in private bot chat"
+		}
+
+		_, err = b.client.Send(dest, resp)
+		if err != nil {
+			ch <- errors.Wrap(err, "Bot reply failed")
 		}
 
 	} else {
-		resp = "Command forbiden, use only in private bot chat"
+		ch <- errors.Wrap(err, "Get destination fail")
 	}
-
-	t := err
-	_, err = b.client.Send(dest, resp)
-	if err != nil {
-		ch <- fmt.Errorf("%s, %s", t, err)
-	}
-	ch <- nil
+	close(ch)
 }
 
 // help command
 func (b *Bot) HandleHelp(ctx context.Context, c tele.Context, ch chan error) {
-	dest := getDest(c)
+	if dest, err := getDest(c, b.logger); err == nil {
 
-	resp := "HandleHelp command in process..\n"
-	resp += fmt.Sprintf("With args: %v", c.Args())
-	_, err := b.client.Send(dest, resp)
-	if err != nil {
-		ch <- err
+		resp := "HandleHelp command in process..\n"
+		resp += fmt.Sprintf("With args: %v", c.Args())
+
+		_, err := b.client.Send(dest, resp)
+		if err != nil {
+			ch <- errors.Wrap(err, "Bot reply failed")
+		}
+
+	} else {
+		ch <- errors.Wrap(err, "Get destination fail")
 	}
-	ch <- nil
+	close(ch)
 }
 
 func (b Bot) BaseCommands() *[]Command {

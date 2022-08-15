@@ -1,10 +1,10 @@
 package main
 
 import (
-	"log"
 	"time"
 
-	"github.com/go-faster/errors"
+	"emperror.dev/errors"
+	"go.uber.org/zap"
 
 	"github.com/ChernichenkoStephan/mvthbot/internal/auth"
 	tg "github.com/ChernichenkoStephan/mvthbot/internal/bot"
@@ -21,7 +21,13 @@ type App struct {
 	// bot
 	bot *tg.Bot
 
+	// logging
+	lg *zap.SugaredLogger
+
 	// db
+
+	// cache
+	cache *user.Cache
 
 	// Services
 	userService     user.UserService
@@ -33,12 +39,12 @@ type App struct {
 	authRepository     auth.AuthRepository
 }
 
-func InitApp( /*metrics logger db*/ ) (*App, error) {
-	log.Println("App setup")
+func InitApp( /*metrics db*/ lg *zap.SugaredLogger) (*App, error) {
+	lg.Infoln("App setup")
 
 	api := fiber.New(fiber.Config{
 		AppName:      "Equation solving service",
-		ServerHeader: "Fiber",
+		ServerHeader: "Mvthbot API",
 	})
 
 	// TODO change to normal
@@ -51,28 +57,34 @@ func InitApp( /*metrics logger db*/ ) (*App, error) {
 	us := user.NewUserService(ur)
 	vs := user.NewVariableService(vr)
 
+	// Creating logger for bot
+	blg := lg.Named("BOT")
+
 	// TODO Token from Viper
 	pref := tele.Settings{
 		Token:  "5597673919:AAGdW5TVuWkFkvCf87knskCPlg7HUoipSTY",
 		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
 		OnError: func(err error, c tele.Context) {
-			log.Printf("Got error: %v", err)
+			blg.Errorf("Got error in Telegram bot: %v", err)
 		},
 	}
 
 	c, err := tele.NewBot(pref)
 	if err != nil {
-		log.Fatal(err)
 		return nil, errors.Wrap(err, "Error during Telegram bot setup")
 	}
 
 	f := fixing.New()
-	b := tg.NewBot(c, us, vs, f)
+	b := tg.NewBot(c, us, vs, f, blg)
 
 	app := &App{
 		api: api,
 
 		bot: b,
+
+		cache: cache,
+
+		lg: lg,
 
 		userService:     us,
 		veriableService: vs,
@@ -95,11 +107,12 @@ func InitApp( /*metrics logger db*/ ) (*App, error) {
 	}
 
 	// Telegram bot setup
-	err = setupBot(app)
+	err = setupBot(app, blg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error during Telegram bot setup")
 	}
 
+	app.lg.Infoln("App init success")
 	return app, nil
 }
 

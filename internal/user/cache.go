@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -96,7 +97,7 @@ func (c *Cache) Delete(key string) error {
 	defer c.Unlock()
 
 	if _, found := c.items[key]; !found {
-		return fmt.Errorf("Key not found")
+		return errors.New("Key not found")
 	}
 
 	delete(c.items, key)
@@ -123,7 +124,7 @@ func (c *Cache) Rename(prewKey, newKey string) error {
 
 	i, found := c.items[prewKey]
 	if !found {
-		return fmt.Errorf("Key not found")
+		return errors.New("Key not found")
 	}
 
 	c.items[newKey] = i

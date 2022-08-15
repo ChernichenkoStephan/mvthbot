@@ -4,39 +4,53 @@
 
 A service-bot with users, variables, and calculation history support to solve equations in text format, to help with calculations in chats. With an open API for interacting with other services and registering via telegram.
 
-## Features
+## Roadmap
 
-- [x] Equation solving
-    - [x] Reverse Polish notation conversion
-    - [x] Variables support
-- [ ] REST API (using Fiber)
-    - [x] Middleware
-    - [x] Auth (using JWT)
-    - [ ] OpenAPI (using Swagger)
-- [ ] Telegram bot (using tucnak/telebot)
-    - [x] Broadcasting
-    - [x] Middleware
-    - [x] Commands set
-- [ ] error handling (using emperror.dev/emperror)
-- [ ] logging (using zap)
-- [ ] Database
-    - [ ] PostgreSQL (using xxx)
-    - [ ] Migrations (using Ansible)
-- [ ] ES Deploy (using Docker and Makefile)
-- [ ] metrics and tracing using Prometheus and Jaeger (via OpenCensus)
-- [ ] health checks (using AppsFlyer/go-sundheit)
-- [ ] graceful restart (using cloudflare/tableflip) and shutdown
-- [ ] support for multiple server/daemon instances (using oklog/run)
-- [ ] messaging (using ThreeDotsLabs/watermill)
-- [ ] configuration (using spf13/viper)
-- [ ] Nginx
-- [ ] Dashboard (using GoAdminGroup/go-admin)
-- [ ] Full Deploy (using Dockercompose)
-- [ ] Advanced Testing
-    - Coverage increase
-    - Load testing
-- [ ] CL/CI
-- [ ] Rewrite DB with codegen (somewhere in future)
+- [ ] mvthbot MVP
+    - [x] Equation solving
+        - [x] Reverse Polish notation conversion
+        - [x] Variables support
+    - [ ] REST API (using Fiber)
+        - [x] Middleware
+        - [x] Auth (using JWT)
+        - [ ] OpenAPI (using Swagger)
+    - [x] Telegram bot (using tucnak/telebot)
+        - [x] Broadcasting
+        - [x] Middleware
+        - [x] Commands set
+    - [x] error handling (using emperror.dev/emperror)
+    - [ ] logging (using zap)
+    - [ ] Database
+        - [ ] PostgreSQL (using xxx)
+        - [ ] Migrations (using Ansible)
+    - [ ] configuration (using spf13/viper)
+    - [ ] Deploy (using Docker and Makefile)
+- [ ] mvthbot 1.0
+    - [ ] health checks (using AppsFlyer/go-sundheit)
+    - [ ] graceful restart (using cloudflare/tableflip) and shutdown
+    - [ ] metrics and tracing using Prometheus and Jaeger (via OpenCensus)
+    - [ ] support for multiple server/daemon instances (using oklog/run)
+- [ ] mvthbot 2.0 (rebuild to microservices)
+    - [ ] Services
+        - [ ] Solving
+        - [ ] User
+        - [ ] Bot
+        - [ ] Gateway (Nginx & REST & grpc)
+        - [ ] Auth
+    - [ ] messaging (using ThreeDotsLabs/watermill)
+- [ ] mvthbot 3.0
+    - [ ] Proper testing
+        - [ ] Tests refactoring
+        - [ ] Coverage increase
+        - [ ] Load testing
+    - [ ] CI/CD
+        - [ ] Docker-compose
+        - [ ] Kubernetes
+        - [ ] Ansible
+        - [ ] Jenkins
+        - [ ] GitHub Actions
+    - [ ] Dashboard (using GoAdminGroup/go-admin)
+    - [ ] Rewrite DB with codegen
 
 ## Project structure
 

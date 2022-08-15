@@ -21,7 +21,7 @@ func NewAuthRepository(c *user.Cache) *authRepository {
 func (repo *authRepository) GetPassword(ctx context.Context, id int64) (string, error) {
 	it, ok := repo.cache.Get(fmt.Sprintf("%v", id))
 	if !ok {
-		return "", fmt.Errorf("UserNotFound")
+		return "", fmt.Errorf("User with id %d not found", id)
 	}
 
 	u, ok := it.(*user.User)

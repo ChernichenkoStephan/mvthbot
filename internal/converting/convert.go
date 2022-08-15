@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"unicode"
 
+	"emperror.dev/errors"
 	lex "github.com/ChernichenkoStephan/mvthbot/internal/lexemes"
 	"github.com/ChernichenkoStephan/mvthbot/internal/utils"
 )
@@ -18,12 +19,13 @@ type RPNConverter interface {
 type RPNConverterFunc func(line string) ([]string, error)
 
 func validateName(name string) error {
-	if unicode.IsDigit([]rune(name)[0]) {
-		return fmt.Errorf("Name can't start with number")
+	begin := []rune(name)[0]
+	if unicode.IsDigit(begin) {
+		return VariableNameError{"Name can't start with number", name, begin, 0}
 	}
-	for _, c := range name {
+	for i, c := range name {
 		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
-			return fmt.Errorf("Unvalid variable character: '%c'", c)
+			return VariableNameError{"Name can't start with number", name, c, i}
 		}
 	}
 	return nil
@@ -34,7 +36,7 @@ func putVal(buffer []rune, stack []string) ([]rune, []string, error) {
 	_, err := strconv.ParseFloat(v, 64)
 	if err != nil {
 		if err = validateName(v); err != nil {
-			return []rune{}, []string{}, fmt.Errorf("Not number or name %v", err)
+			return []rune{}, []string{}, errors.Wrap(err, "Put value to stack failed")
 		}
 	}
 	stack = append(stack, v)
@@ -49,10 +51,9 @@ func ToRPN(equation string) ([]string, error) {
 		opStack = []string{}
 		buffer  = []rune{}
 		op      string
-		err     error
 	)
 
-	for i, c := range equation {
+	for place, c := range equation {
 		switch {
 		case unicode.IsDigit(c) || c == '.':
 			buffer = append(buffer, c)
@@ -69,20 +70,23 @@ func ToRPN(equation string) ([]string, error) {
 						buffer = []rune{}
 					}
 				} else {
-					return []string{}, fmt.Errorf("UnknownFuncError")
+					return []string{}, UnknownFunctionError{name, place}
 				}
 			}
+
 		case c == ')':
 			if len(buffer) > 0 {
+				var err error
 				buffer, output, err = putVal(buffer, output)
 				if err != nil {
-					return []string{}, fmt.Errorf("Not number %v", err)
+					msg := fmt.Sprintf("Error during parsing at %d char: '%c'", place, c)
+					return []string{}, errors.Wrap(err, msg)
 				}
 			}
 
 			for {
 				if len(opStack) == 0 {
-					return []string{}, fmt.Errorf("Bracket error %d|%c", i, c)
+					return []string{}, BracketError{place}
 				}
 
 				op, opStack = utils.Pop(opStack)
@@ -100,9 +104,11 @@ func ToRPN(equation string) ([]string, error) {
 
 		case c == ';':
 			if len(buffer) != 0 {
+				var err error
 				buffer, output, err = putVal(buffer, output)
 				if err != nil {
-					return []string{}, fmt.Errorf("Not number %v", err)
+					msg := fmt.Sprintf("Error during parsing at %d char: '%c'", place, c)
+					return []string{}, errors.Wrap(err, msg)
 				}
 			}
 
@@ -118,12 +124,17 @@ func ToRPN(equation string) ([]string, error) {
 				op, opStack = utils.Pop(opStack)
 				output = append(output, op)
 			}
+
 		case lex.IsLexRune(c):
 			if len(buffer) != 0 {
+				var err error
+
 				buffer, output, err = putVal(buffer, output)
 				if err != nil {
-					return []string{}, fmt.Errorf("Not number %v", err)
+					msg := fmt.Sprintf("Error during parsing at %d char: '%c'", place, c)
+					return []string{}, errors.Wrap(err, msg)
 				}
+
 			}
 
 			for {
@@ -142,15 +153,19 @@ func ToRPN(equation string) ([]string, error) {
 				}
 			}
 			opStack = append(opStack, string(c))
+
 		default:
 			buffer = append(buffer, c)
 		}
 	}
 
 	if len(buffer) > 0 {
+		var err error
 		buffer, output, err = putVal(buffer, output)
 		if err != nil {
-			return []string{}, fmt.Errorf("Not number %v", err)
+			buffer, output, err = putVal(buffer, output)
+			msg := fmt.Sprintf("Error during parsing")
+			return []string{}, errors.Wrap(err, msg)
 		}
 	}
 
@@ -161,7 +176,7 @@ func ToRPN(equation string) ([]string, error) {
 
 		op, opStack = utils.Pop(opStack)
 		if op == "(" || op == ")" {
-			return []string{}, fmt.Errorf("Bracket error")
+			return []string{}, BracketError{len(equation)}
 		}
 		output = append(output, op)
 	}

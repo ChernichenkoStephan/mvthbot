@@ -1,6 +1,10 @@
 package auth
 
-import "context"
+import (
+	"context"
+
+	"go.uber.org/zap"
+)
 
 type loginRequest struct {
 	Username string `json:"username"`
@@ -18,6 +22,7 @@ type AuthRepository interface {
 type AuthHandler struct {
 	repository AuthRepository
 	idGetter   IDGetter
+	logger     *zap.SugaredLogger
 }
 
 // TODO: Change secret to more secure

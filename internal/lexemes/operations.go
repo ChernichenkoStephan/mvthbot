@@ -1,6 +1,7 @@
 package lexemes
 
 import (
+	"errors"
 	"fmt"
 	"math"
 )
@@ -24,7 +25,7 @@ func Mult(args ...float64) (float64, error) {
 
 func Div(args ...float64) (float64, error) {
 	if args[1] < 0.000001 {
-		return 0.0, fmt.Errorf("Divide by 0")
+		return 0.0, errors.New("Divide by 0")
 	}
 	return args[0] / args[1], nil
 }

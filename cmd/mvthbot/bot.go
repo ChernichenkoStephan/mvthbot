@@ -2,32 +2,32 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"errors"
 
+	"go.uber.org/zap"
 	tele "gopkg.in/telebot.v3"
 
 	tg "github.com/ChernichenkoStephan/mvthbot/internal/bot"
 )
 
-func setupBot(app *App) error {
-	log.Println("Bot setup")
+func setupBot(app *App, lg *zap.SugaredLogger) error {
+	lg.Infoln("Bot setup")
 
 	b := app.bot.Client()
 
-	b.Use(tg.Log)
+	b.Use(tg.Logging(lg))
 	b.Use(tg.UserCheck(app.userService))
 	b.Use(tg.ArgParse)
 
 	b.Handle(tele.OnText, func(c tele.Context) error {
-		ch := make(chan error)
+		ch := make(chan error, 2)
 		go app.bot.HandleDefault(context.TODO(), c, ch)
 		return <-ch
 	})
 
 	commands := make([]tele.Command, 0)
 	for _, cmd := range *app.bot.BaseCommands() {
-		log.Printf("Setting '%s' command\n", cmd.Meta.Text)
+		lg.Infof("Setting '%s' command", cmd.Meta.Text)
 
 		b.Handle(cmd.Meta.Text, tg.NewTeleHandler(cmd.Handler))
 
@@ -36,7 +36,14 @@ func setupBot(app *App) error {
 		}
 	}
 
-	return b.SetCommands(commands)
+	err := b.SetCommands(commands)
+	if err != nil {
+		lg.Errorln("Command setup failed")
+	}
+
+	lg.Infoln("Bot setup success")
+	return nil
+
 }
 
 func runBot(app *App) error {
@@ -44,7 +51,7 @@ func runBot(app *App) error {
 	var err error
 	defer func() {
 		if panicked {
-			err = fmt.Errorf("Telegram bot runing error")
+			err = errors.New("Telegram bot runing error")
 		}
 	}()
 	app.bot.Client().Start()

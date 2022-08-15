@@ -2,7 +2,6 @@ package bot
 
 import (
 	"fmt"
-	"log"
 
 	slv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
 )
@@ -38,7 +37,6 @@ func (b *OutputBuilder) Write(statement *slv.Statement) {
 }
 
 func (b *OutputBuilder) WriteFull(statement *slv.Statement) {
-	log.Println(*statement)
 	b.WriteVariables(&statement.Variables)
 	b.WriteEquation(statement.Equation)
 	b.WriteValue(statement.Value)

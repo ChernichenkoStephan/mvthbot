@@ -3,19 +3,22 @@ package auth
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
+
+	"emperror.dev/errors"
+	"go.uber.org/zap"
 
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/golang-jwt/jwt/v4"
 )
 
-func NewAuthHandler(authRoute fiber.Router, repo AuthRepository, getter IDGetter) {
+func NewAuthHandler(authRoute fiber.Router, repo AuthRepository, getter IDGetter, lg *zap.SugaredLogger) {
 	handler := &AuthHandler{
 		repository: repo,
 		idGetter:   getter,
+		logger:     lg,
 	}
 
 	authRoute.Post("/login", handler.signInUser)
@@ -33,13 +36,12 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 
 	request := &loginRequest{}
 	if err := c.BodyParser(request); err != nil {
-		log.Printf("[signInUser] parsing error")
-		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"status":  "fail",
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Error during request parsing")
 	}
-	log.Printf("[signInUser] request: %v", request.Username)
 
 	id, err := strconv.ParseInt(request.Username, 0, 64)
 
@@ -47,27 +49,29 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 	if err != nil {
 		id, err = h.idGetter.GetUserID(request.Username)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 				"status":  "fail",
 				"message": err.Error(),
 			})
+			return errors.Wrap(err, "Error during id fetching")
 		}
 	}
 
 	pass, err := h.repository.GetPassword(context.TODO(), id)
 	if err != nil {
-		log.Printf("User password error")
-		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"status":  "fail",
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Error during password request")
 	}
 
 	if pass != request.Password {
-		return c.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
+		c.Status(fiber.StatusUnauthorized).JSON(&fiber.Map{
 			"status":  "fail",
 			"message": "Wrong password!",
 		})
+		return errors.New("Wrong password")
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClaims{
@@ -82,11 +86,11 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 
 	signedToken, err := token.SignedString([]byte(_TEST_SECRET))
 	if err != nil {
-		log.Printf("Token generation fault")
-		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"status":  "fail",
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Error during JWT generation")
 	}
 
 	c.Cookie(&fiber.Cookie{
@@ -98,7 +102,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 		HTTPOnly: true,
 	})
 
-	log.Printf("'%v' Login success", request.Username)
+	h.logger.Infof("User '%v' login success\n", request.Username)
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"status": "success",
 		"token":  signedToken,
@@ -106,6 +110,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 }
 
 func (h *AuthHandler) signOutUser(c *fiber.Ctx) error {
+
 	c.Cookie(&fiber.Cookie{
 		Name:     "jwt",
 		Value:    "loggedOut",
@@ -115,6 +120,10 @@ func (h *AuthHandler) signOutUser(c *fiber.Ctx) error {
 		HTTPOnly: true,
 	})
 
+	jwtData := c.Locals("user").(*jwt.Token)
+	claims := jwtData.Claims.(jwt.MapClaims)
+
+	h.logger.Infof("User '%v' logout\n", claims["uid"])
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"status":  "success",
 		"message": "Logged out successfully!",

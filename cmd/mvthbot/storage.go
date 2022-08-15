@@ -1,8 +1,7 @@
 package main
 
-import "log"
-
 func setupDB(app *App) error {
-	log.Println("DB setup")
+	app.lg.Infoln("DB setup")
+	app.lg.Infoln("DB setup success")
 	return nil
 }

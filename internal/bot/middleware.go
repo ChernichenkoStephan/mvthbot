@@ -2,11 +2,12 @@ package bot
 
 import (
 	"context"
-	"log"
 	"strings"
 
+	"emperror.dev/errors"
 	slv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
 	"github.com/ChernichenkoStephan/mvthbot/internal/user"
+	"go.uber.org/zap"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -58,17 +59,18 @@ func parseStatements(input string) []slv.Statement {
 
 func ArgParse(next tele.HandlerFunc) tele.HandlerFunc {
 	return func(c tele.Context) error {
-		log.Printf("Parsing %v", c.Message().Text)
 		sts := parseStatements(c.Message().Text)
 		c.Set("statements", sts)
 		return next(c)
 	}
 }
 
-func Log(next tele.HandlerFunc) tele.HandlerFunc {
-	return func(c tele.Context) error {
-		log.Printf("Message from '%v' with text '%v' in '%v'", c.Sender().ID, c.Text(), c.Chat().Type)
-		return next(c)
+func Logging(logger *zap.SugaredLogger) tele.MiddlewareFunc {
+	return func(next tele.HandlerFunc) tele.HandlerFunc {
+		return func(c tele.Context) error {
+			logger.Infof("Message from '%v' with text '%v' in %s[%s|%d]", c.Sender().ID, c.Text(), c.Chat().FirstName, c.Chat().Type, c.Chat().ID)
+			return next(c)
+		}
 	}
 }
 
@@ -79,8 +81,7 @@ func UserCheck(userService user.UserService) tele.MiddlewareFunc {
 				ctx := context.TODO()
 				ok, err := userService.Exist(ctx, c.Message().Sender.ID)
 				if err != nil {
-					// TODO fix this
-					ok = true
+					return errors.Wrap(err, "User existence check failed")
 				}
 				if !ok {
 					u := user.NewUser(c.Message().Sender.ID)

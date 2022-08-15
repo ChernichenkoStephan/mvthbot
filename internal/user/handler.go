@@ -2,8 +2,8 @@ package user
 
 import (
 	"context"
-	"fmt"
 
+	"emperror.dev/errors"
 	"github.com/ChernichenkoStephan/mvthbot/internal/converting"
 	"github.com/ChernichenkoStephan/mvthbot/internal/solving"
 	"github.com/ChernichenkoStephan/mvthbot/internal/utils"
@@ -43,30 +43,34 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 
 	eq, err := converting.ToRPN(decoded)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Convertion to RPN fail")
 	}
 
 	vs, err := h.variableService.GetAll(context.TODO(), uID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Get variables fail")
 	}
 
 	res, err := solving.Solve(eq, vs)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Solving fail")
 	}
 
 	err = h.variableService.Add(context.TODO(), uID, n, res)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Variables saving fail")
 	}
 
 	st := &solving.Statement{
@@ -74,12 +78,13 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 		Equation:  decoded,
 		Value:     res,
 	}
-	fmt.Printf("AddStatement %v", st)
+
 	err = h.userService.AddStatement(context.TODO(), uID, st)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Statement saving fail")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -107,32 +112,36 @@ func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 	req := &setVariablesRequest{}
 
 	if err := c.BodyParser(req); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Parsing fail")
 	}
 
 	vs, err := h.variableService.GetAll(context.TODO(), uID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Getting variables fail")
 	}
 
 	vals := make([]float64, 0)
 	for _, st := range req.Statements {
 		eq, err := converting.ToRPN(st.Equation)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),
 			})
+			return errors.Wrap(err, "Converting to RPN fail")
 		}
 
 		res, err := solving.Solve(eq, vs)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),
 			})
+			return errors.Wrap(err, "Solving fail")
 		}
 		vals = append(vals, res)
 
@@ -143,16 +152,18 @@ func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 		}
 		err = h.userService.AddStatement(context.TODO(), uID, ost)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),
 			})
+			return errors.Wrap(err, "Statement saving fail")
 		}
 
 		err = h.variableService.AddWithNames(context.TODO(), uID, st.Names, res)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),
 			})
+			return errors.Wrap(err, "Names saving fail")
 		}
 
 		for _, n := range st.Names {
@@ -171,9 +182,10 @@ func (h *variableHandler) GetVariable(c *fiber.Ctx) error {
 
 	v, err := h.variableService.Get(context.TODO(), uID, n)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Getting variables fail")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -196,16 +208,18 @@ func (h *variableHandler) GetVariables(c *fiber.Ctx) error {
 	req := &variablesRequest{}
 
 	if err := c.BodyParser(req); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Request parsing fail")
 	}
 
 	vars, err := h.variableService.GetWithNames(context.TODO(), uID, req.Names)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Getting variables fail")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -220,17 +234,19 @@ func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 	if n == "" {
 		err := h.variableService.DeleteAll(context.TODO(), uID)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),
 			})
+			return errors.Wrap(err, "Deleting all variables fail")
 		}
 	}
 
 	err := h.variableService.Delete(context.TODO(), uID, n)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Deletiing variables fail")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -242,9 +258,10 @@ func (h *variableHandler) DeleteAllVariables(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 
 	if err := h.variableService.DeleteAll(context.TODO(), uID); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Deleting variables fail")
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Success",
@@ -276,9 +293,10 @@ func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 
 	hist, err := h.userService.GetHistory(context.TODO(), uID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Solving fail")
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"history": hist,
@@ -288,9 +306,10 @@ func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 func (h *historyHandler) DeleteHistory(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	if err := h.userService.DeleteHistory(context.TODO(), uID); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
+		return errors.Wrap(err, "Solving fail")
 	}
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Success",
