@@ -27,7 +27,7 @@ type Bot struct {
 	logger *zap.SugaredLogger
 }
 
-type HandleFunc func(ctx context.Context, c tele.Context, ch chan error)
+type HandleFunc func(ctx context.Context, c tele.Context) error
 
 type Command struct {
 	Meta            tele.Command

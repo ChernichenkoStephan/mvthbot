@@ -20,9 +20,7 @@ func setupBot(app *App, lg *zap.SugaredLogger) error {
 	b.Use(tg.ArgParse)
 
 	b.Handle(tele.OnText, func(c tele.Context) error {
-		ch := make(chan error, 2)
-		go app.bot.HandleDefault(context.TODO(), c, ch)
-		return <-ch
+		return app.bot.HandleDefault(context.TODO(), c)
 	})
 
 	commands := make([]tele.Command, 0)

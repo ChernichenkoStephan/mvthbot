@@ -11,15 +11,15 @@ A service-bot with users, variables, and calculation history support to solve eq
         - [x] Reverse Polish notation conversion
         - [x] Variables support
     - [ ] REST API (using Fiber)
-        - [x] Middleware
+        - [x] Middleware (logging, parsing, etc.)
         - [x] Auth (using JWT)
         - [ ] OpenAPI (using Swagger)
     - [x] Telegram bot (using tucnak/telebot)
         - [x] Broadcasting
-        - [x] Middleware
+        - [x] Middleware (logging, parsing etc.)
         - [x] Commands set
     - [x] error handling (using emperror.dev/emperror)
-    - [x] logging (using zap)
+    - [x] logging (using uber.org/zap)
     - [ ] Database
         - [ ] PostgreSQL (using github.com/jackc/pgx)
         - [ ] Migrations (using Ansible)
