@@ -29,3 +29,11 @@ _arch
 # log files
 *.log*
 
+# Some tempororary repitable command, sql scripts etc.
+temp
+
+# Binary files
+bin
+
+# Drawio system files
+~$*

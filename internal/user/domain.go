@@ -43,6 +43,7 @@ type UserService interface {
 	Delete(ctx context.Context, userID int64) error
 
 	AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error
+	AddStatements(ctx context.Context, userID int64, statement []*solv.Statement) error
 
 	GetHistory(ctx context.Context, userID int64) (*History, error)
 
@@ -68,6 +69,7 @@ type UserRepository interface {
 	Delete(ctx context.Context, userID int64) error
 
 	AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error
+	AddStatements(ctx context.Context, userID int64, statement []*solv.Statement) error
 
 	GetHistory(ctx context.Context, userID int64) (*History, error)
 
@@ -83,8 +85,8 @@ type UserRepository interface {
 //
 //
 type VariableService interface {
-	Add(ctx context.Context, userID int64, name string, value float64) error
-	AddWithNames(ctx context.Context, userID int64, names []string, value float64) error
+	//Add(ctx context.Context, userID int64, name string, value float64) error
+	//AddWithNames(ctx context.Context, userID int64, names []string, value float64) error
 
 	Get(ctx context.Context, userID int64, name string) (float64, error)
 	GetWithNames(ctx context.Context, userID int64, names []string) (VMap, error)
@@ -104,8 +106,8 @@ type VariableService interface {
 //
 //
 type VariableRepository interface {
-	Add(ctx context.Context, userID int64, name string, value float64) error
-	AddWithNames(ctx context.Context, userID int64, names []string, value float64) error
+	//Add(ctx context.Context, userID int64, name string, value float64) error
+	//AddWithNames(ctx context.Context, userID int64, names []string, value float64) error
 
 	Get(ctx context.Context, userID int64, name string) (float64, error)
 	GetWithNames(ctx context.Context, userID int64, names []string) (VMap, error)

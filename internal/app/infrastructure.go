@@ -62,21 +62,16 @@ func Run(f func(ctx context.Context, lg *zap.SugaredLogger) error) {
 		<-ctx.Done()
 
 		// Context is canceled, giving application time to shut down gracefully.
-		//lg.Info("Waiting for application shutdown")
 		lg.Infof("\nCaiting for application shutdown\n")
 		time.Sleep(watchdogTimeout)
 
 		// Probably deadlock, forcing shutdown.
-		//lg.Warn("Graceful shutdown watchdog triggered: forcing shutdown")
 		lg.Infof("\nGraceful shutdown watchdog triggered: forcing shutdown\n")
 		os.Exit(exitCodeWatchdog)
 	}()
 
 	// Note that we are calling os.Exit() here and no
 	if err := wg.Wait(); err != nil {
-		//lg.Error("Failed",
-		//	zap.Error(err),
-		//)
 		lg.Errorf("Failed %v", err)
 		os.Exit(exitCodeApplicationErr)
 	}
