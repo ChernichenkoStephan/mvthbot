@@ -8,6 +8,7 @@ coverage:
 
 build:
 	CGO_ENABLED=0 go build ./cmd/mvthbot
+	mv mvthbot ./bin
 .PHONY: build
 
 clear:

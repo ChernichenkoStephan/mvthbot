@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ChernichenkoStephan/mvthbot/internal/app"
 	"github.com/go-faster/errors"
@@ -20,15 +21,27 @@ func main() {
 			return errors.Wrap(err, "App init failed")
 		}
 
-		// Run API
-		g.Go(func() error {
-			return runAPI(app)
-		})
+		//err = app.variableRepository.Delete(context.TODO(), 11111, `a`)
+		//err = app.variableRepository.DeleteWithNames(context.TODO(), 11111, []string{`a`, `b`})
+		err = app.variableRepository.DeleteAll(context.TODO(), 11111)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println("SUCCESS")
+		}
+		//fmt.Printf("%#v\n", v)
 
-		// Run Bot
-		g.Go(func() error {
-			return runBot(app)
-		})
+		/*
+			// Run API
+			g.Go(func() error {
+				return runAPI(app)
+			})
+
+			// Run Bot
+			g.Go(func() error {
+				return runBot(app)
+			})
+		*/
 
 		return g.Wait()
 	})

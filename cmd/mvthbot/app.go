@@ -8,11 +8,8 @@ import (
 
 	"github.com/ChernichenkoStephan/mvthbot/internal/auth"
 	tg "github.com/ChernichenkoStephan/mvthbot/internal/bot"
-	"github.com/ChernichenkoStephan/mvthbot/internal/fixing"
 	"github.com/ChernichenkoStephan/mvthbot/internal/user"
 	"github.com/gofiber/fiber/v2"
-
-	tele "gopkg.in/telebot.v3"
 )
 
 type App struct {
@@ -48,39 +45,47 @@ func InitApp( /*metrics db*/ lg *zap.SugaredLogger) (*App, error) {
 	})
 
 	// TODO change to normal
-	cache := user.GetTestCache(time.Hour, time.Hour)
+	cache := user.GetCache(time.Hour, time.Hour)
 
-	ur := user.NewUserRepository(cache)
-	vr := user.NewVariableRepository(cache)
-	ar := auth.NewAuthRepository(cache)
+	// DB setup
+	db, err := setupDB(lg)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error during DB setup")
+	}
+
+	ur := user.NewUserRepository(cache, db)
+	vr := user.NewVariableRepository(cache, db)
+	ar := auth.NewAuthRepository(cache, db)
 
 	us := user.NewUserService(ur)
 	vs := user.NewVariableService(vr)
 
 	// Creating logger for bot
-	blg := lg.Named("BOT")
+	//blg := lg.Named("BOT")
 
-	// TODO Token from Viper
-	pref := tele.Settings{
-		Token:  "5597673919:AAGdW5TVuWkFkvCf87knskCPlg7HUoipSTY",
-		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
-		OnError: func(err error, c tele.Context) {
-			blg.Errorf("Got error in Telegram bot: %v", err)
-		},
-	}
+	/*
+		// TODO Token from Viper
+		pref := tele.Settings{
+			Token:  "5597673919:AAGdW5TVuWkFkvCf87knskCPlg7HUoipSTY",
+			Poller: &tele.LongPoller{Timeout: 10 * time.Second},
+			OnError: func(err error, c tele.Context) {
+				blg.Errorf("Got error in Telegram bot: %v", err)
+			},
+		}
 
-	c, err := tele.NewBot(pref)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error during Telegram bot setup")
-	}
+		c, err := tele.NewBot(pref)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error during Telegram bot setup")
+		}
 
-	f := fixing.New()
-	b := tg.NewBot(c, us, vs, f, blg)
+		f := fixing.New()
+		b := tg.NewBot(c, us, vs, f, blg)
+	*/
 
 	app := &App{
 		api: api,
 
-		bot: b,
+		//bot: b,
 
 		cache: cache,
 
@@ -94,23 +99,19 @@ func InitApp( /*metrics db*/ lg *zap.SugaredLogger) (*App, error) {
 		authRepository:     ar,
 	}
 
-	// DB setup
-	err = setupDB(app)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error during DB setup")
-	}
-
 	// API setup
 	err = setupAPI(app)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error during API setup")
 	}
 
-	// Telegram bot setup
-	err = setupBot(app, blg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error during Telegram bot setup")
-	}
+	/*
+		// Telegram bot setup
+		err = setupBot(app, blg)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error during Telegram bot setup")
+		}
+	*/
 
 	app.lg.Infoln("App init success")
 	return app, nil

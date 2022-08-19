@@ -65,7 +65,6 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 		return errors.Wrap(err, "Solving fail")
 	}
 
-	err = h.variableService.Add(context.TODO(), uID, n, res)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -158,7 +157,6 @@ func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 			return errors.Wrap(err, "Statement saving fail")
 		}
 
-		err = h.variableService.AddWithNames(context.TODO(), uID, st.Names, res)
 		if err != nil {
 			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),

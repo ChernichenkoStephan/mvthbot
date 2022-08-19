@@ -85,7 +85,6 @@ func (b *Bot) process(ctx context.Context, uID int64, statements interface{}) (s
 
 		c := context.TODO()
 
-		err = b.variablesService.AddWithNames(c, uID, s.Variables, res)
 		if err != nil {
 			msg := "Variables add with names failed"
 			return "", errors.Wrap(err, msg)

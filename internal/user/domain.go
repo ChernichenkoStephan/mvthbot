@@ -14,8 +14,11 @@ type History []solv.Statement
 
 type User struct {
 
+	// Internal DB id
+	id int
+
 	// Telegram user id
-	ID int64
+	TelegramID int64
 
 	// Randomly generated password
 	Password string
@@ -85,9 +88,6 @@ type UserRepository interface {
 //
 //
 type VariableService interface {
-	//Add(ctx context.Context, userID int64, name string, value float64) error
-	//AddWithNames(ctx context.Context, userID int64, names []string, value float64) error
-
 	Get(ctx context.Context, userID int64, name string) (float64, error)
 	GetWithNames(ctx context.Context, userID int64, names []string) (VMap, error)
 	GetAll(ctx context.Context, userID int64) (VMap, error)
@@ -106,15 +106,12 @@ type VariableService interface {
 //
 //
 type VariableRepository interface {
-	//Add(ctx context.Context, userID int64, name string, value float64) error
-	//AddWithNames(ctx context.Context, userID int64, names []string, value float64) error
-
 	Get(ctx context.Context, userID int64, name string) (float64, error)
 	GetWithNames(ctx context.Context, userID int64, names []string) (VMap, error)
 	GetAll(ctx context.Context, userID int64) (VMap, error)
 
 	Update(ctx context.Context, userID int64, name string, value float64) error
-	UpdateWithNames(ctx context.Context, userID int64, names []string, values []float64) error
+	UpdateWithNames(ctx context.Context, userID int64, names []string, value float64) error
 
 	Delete(ctx context.Context, userID int64, name string) error
 	DeleteWithNames(ctx context.Context, userID int64, names []string) error
@@ -141,6 +138,12 @@ type Cache struct {
 
 	vr VariableRepository
 	ur UserRepository
+}
+
+type ItemNotFoundError struct{}
+
+func (e ItemNotFoundError) Error() string {
+	return "Item not found"
 }
 
 //

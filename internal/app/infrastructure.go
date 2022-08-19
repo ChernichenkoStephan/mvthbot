@@ -38,7 +38,7 @@ func Run(f func(ctx context.Context, lg *zap.SugaredLogger) error) {
 	fmt.Println(exPath)
 
 	opt := &logging.Options{
-		LogFileDir: exPath + "/logs",
+		LogFileDir: exPath[:len(exPath)-3] + `logs`,
 		AppName:    "logtool",
 		MaxSize:    30,
 		MaxBackups: 7,

@@ -22,7 +22,7 @@ A service-bot with users, variables, and calculation history support to solve eq
     - [x] logging (using uber.org/zap)
     - [ ] Database
         - [ ] PostgreSQL (using github.com/jackc/pgx)
-        - [ ] Migrations (using golang-migrate)
+        - [x] Migrations (using golang-migrate)
     - [ ] configuration (using spf13/viper)
     - [ ] Deploy (using Docker and Makefile)
 - [ ] mvthbot 1.0

@@ -1,5 +1,5 @@
 --	Get(ctx context.Context, userID int64, name string) (float64, error)
-SELECT DISTINCT variables.name, variables.value 
+SELECT DISTINCT variables.name as "name", variables.value as "value"
 FROM "variables" INNER JOIN
     "statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
     "statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN

@@ -58,6 +58,14 @@ func (us userService) AddStatement(ctx context.Context, userID int64, statement 
 	return nil
 }
 
+func (us userService) AddStatements(ctx context.Context, userID int64, statements []*solv.Statement) error {
+	err := us.userReposiory.AddStatements(ctx, userID, statements)
+	if err != nil {
+		return errors.Wrap(err, "Got error with adding statement to cahce")
+	}
+	return nil
+}
+
 func (us userService) GetHistory(ctx context.Context, userID int64) (*History, error) {
 	h, err := us.userReposiory.GetHistory(ctx, userID)
 	if err != nil {
@@ -100,22 +108,6 @@ func NewVariableService(repo VariableRepository) *variableService {
 	return &variableService{repo}
 }
 
-func (us variableService) Add(ctx context.Context, userID int64, name string, value float64) error {
-	err := us.variableReposiory.Add(ctx, userID, name, value)
-	if err != nil {
-		return errors.Wrap(err, "Got error with adding variable to cache")
-	}
-	return nil
-}
-
-func (us variableService) AddWithNames(ctx context.Context, userID int64, names []string, value float64) error {
-	err := us.variableReposiory.AddWithNames(ctx, userID, names, value)
-	if err != nil {
-		return errors.Wrap(err, "Got error with adding multiple variables to cache")
-	}
-	return nil
-}
-
 func (us variableService) Get(ctx context.Context, userID int64, name string) (float64, error) {
 	v, err := us.variableReposiory.Get(ctx, userID, name)
 	if err != nil {
@@ -149,11 +141,7 @@ func (us variableService) Update(ctx context.Context, userID int64, name string,
 }
 
 func (us variableService) UpdateWithNames(ctx context.Context, userID int64, names []string, value float64) error {
-	values := make([]float64, len(names))
-	for i := range names {
-		values[i] = value
-	}
-	err := us.variableReposiory.UpdateWithNames(ctx, userID, names, values)
+	err := us.variableReposiory.UpdateWithNames(ctx, userID, names, value)
 	if err != nil {
 		return errors.Wrap(err, "Got error with updating multiple variables in cache")
 	}

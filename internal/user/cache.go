@@ -2,17 +2,9 @@ package user
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 )
-
-var _defaultUser *User = &User{
-	ID:        11111,
-	Password:  "password",
-	History:   &History{},
-	Variables: VMap{},
-}
 
 var once sync.Once
 
@@ -35,12 +27,6 @@ func GetCache(defaultExpiration, cleanupInterval time.Duration) *Cache {
 	})
 
 	return defaultCache
-}
-
-func GetTestCache(defaultExpiration, cleanupInterval time.Duration) *Cache {
-	p := GetCache(defaultExpiration, cleanupInterval)
-	p.Set(fmt.Sprintf("%v", _defaultUser.ID), _defaultUser, time.Hour)
-	return p
 }
 
 func (c *Cache) Set(key string, value interface{}, duration time.Duration) {
@@ -67,7 +53,7 @@ func (c *Cache) Set(key string, value interface{}, duration time.Duration) {
 
 }
 
-func (c *Cache) Get(key string) (interface{}, bool) {
+func (c *Cache) Get(key string) (interface{}, error) {
 
 	c.RLock()
 
@@ -76,18 +62,18 @@ func (c *Cache) Get(key string) (interface{}, bool) {
 	item, found := c.items[key]
 
 	if !found {
-		return nil, false
+		return nil, &ItemNotFoundError{}
 	}
 
 	if item.Expiration > 0 {
 
 		if time.Now().UnixNano() > item.Expiration {
-			return nil, false
+			return nil, errors.New("Item is outdated")
 		}
 
 	}
 
-	return item.Value, true
+	return item.Value, nil
 }
 
 func (c *Cache) Delete(key string) error {
@@ -97,7 +83,7 @@ func (c *Cache) Delete(key string) error {
 	defer c.Unlock()
 
 	if _, found := c.items[key]; !found {
-		return errors.New("Key not found")
+		return &ItemNotFoundError{}
 	}
 
 	delete(c.items, key)
@@ -124,7 +110,7 @@ func (c *Cache) Rename(prewKey, newKey string) error {
 
 	i, found := c.items[prewKey]
 	if !found {
-		return errors.New("Key not found")
+		return &ItemNotFoundError{}
 	}
 
 	c.items[newKey] = i

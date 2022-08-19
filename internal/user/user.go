@@ -14,15 +14,16 @@ func (u User) Copy() *User {
 		vs[k] = v
 	}
 	return &User{
-		ID:        u.ID,
-		History:   &h,
-		Variables: vs,
+		id:         u.id,
+		TelegramID: u.TelegramID,
+		History:    &h,
+		Variables:  vs,
 	}
 }
 
 func (u User) String() string {
-	return fmt.Sprintf("{\n\tID: %d,\n\tHistory: %v,\n\tVariables: %v\n}",
-		u.ID, u.History, u.Variables)
+	return fmt.Sprintf("{\n\tID: %d,\n\tTID: %d,\n\tHistory: %v,\n\tVariables: %v\n}",
+		u.id, u.TelegramID, u.History, u.Variables)
 }
 
 func NewUser(id int64) *User {
@@ -30,12 +31,12 @@ func NewUser(id int64) *User {
 	vs := make(map[string]float64)
 
 	return &User{
-		ID:        id,
-		History:   &h,
-		Variables: vs,
+		TelegramID: id,
+		History:    &h,
+		Variables:  vs,
 	}
 }
 
 func (u User) Recipient() string {
-	return fmt.Sprintf("%v", u.ID)
+	return fmt.Sprintf("%v", u.TelegramID)
 }

@@ -1,2 +1,2 @@
-clear && make --directory=../ build && ../mvthbot
+clear && make build && ./bin/mvthbot
 
