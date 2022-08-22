@@ -1,4 +1,4 @@
 --	Update(ctx context.Context, user *User) error
-UPDATE "users"
+UPDATE users
 SET password = 'newpass'
-WHERE "users".tg_id = 11111;
+WHERE users.tg_id = 11111;

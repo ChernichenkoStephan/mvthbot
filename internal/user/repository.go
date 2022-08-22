@@ -11,6 +11,26 @@ import (
 	solv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
 )
 
+// Get variables
+type dbVariable struct {
+	Name  string  `db:"name"`
+	Value float64 `db:"value"`
+}
+
+type dbUser struct {
+	Id       int    `db:"id"`
+	TgID     int64  `db:"tg_id"`
+	Password string `db:"password"`
+	Created  string `db:"created_at"`
+}
+
+type dbStatement struct {
+	Id       int     `db:"id"`
+	Equation string  `db:"equation"`
+	Value    float64 `db:"value"`
+	Created  string  `db:"created_at"`
+}
+
 func getUserFromCache(cache *Cache, uID int64) (*User, error) {
 	it, err := cache.Get(fmt.Sprintf("%v", uID))
 	if err != nil {
@@ -25,7 +45,7 @@ func getUserFromCache(cache *Cache, uID int64) (*User, error) {
 }
 
 func addUserToCache(cache *Cache, user *User) error {
-	cache.Set(fmt.Sprintf("%v", user.id), user, time.Hour)
+	cache.Set(fmt.Sprintf("%v", user.Id), user, time.Hour)
 	return nil
 }
 
@@ -40,100 +60,250 @@ func NewUserRepository(c *Cache, db *sqlx.DB) *userRepository {
 		db:    db,
 	}
 }
+func (repo userRepository) getFilledStatement(ctx context.Context, dbs *dbStatement, variables *VMap) (*solv.Statement, error) {
 
-func (repo *userRepository) GetAll(ctx context.Context) (*[]User, error) {
+	query := `SELECT DISTINCT variables.name as "name", variables.value as "value"
+		FROM "variables" INNER JOIN
+			"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
+			"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
+			"users"                 ON "statements".user_id                 = "users".id
+		WHERE "statements".id = $1;`
 
-	return nil, errors.New("Method forbidden.")
-}
-
-func (repo *userRepository) Get(ctx context.Context, userID int64) (*User, error) {
-	u, err := getUserFromCache(repo.cache, userID)
-	if !errors.As(err, &ItemNotFoundError{}) {
-		return nil, errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-	}
-
-	return u, nil
-}
-
-func (repo *userRepository) Add(ctx context.Context, user *User) error {
-	addUserToCache(repo.cache, user)
-	return nil
-}
-
-func (repo *userRepository) Update(ctx context.Context, user *User) error {
-	repo.cache.Set(fmt.Sprintf("%v", user.id), user, time.Hour)
-	return nil
-}
-
-func (repo *userRepository) Delete(ctx context.Context, userID int64) error {
-	err := repo.cache.Delete(fmt.Sprintf("%v", userID))
-	if !errors.As(err, &ItemNotFoundError{}) {
-		return errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-	}
-	return nil
-}
-
-func (repo *userRepository) GetHistory(ctx context.Context, userID int64) (*History, error) {
-	u, err := getUserFromCache(repo.cache, userID)
-	if !errors.As(err, &ItemNotFoundError{}) {
-		return nil, errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-	}
-	return u.History, nil
-}
-
-func (repo *userRepository) AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error {
-	u, err := getUserFromCache(repo.cache, userID)
+	dbVars := []dbVariable{}
+	err := repo.db.Select(&dbVars, query, dbs.Id)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
+		return nil, errors.Wrap(err, "Select vars request fail")
 	}
 
-	*u.History = append(*u.History, *statement)
+	stVars := make([]string, 0)
+	for _, v := range dbVars {
+		(*variables)[v.Name] = v.Value
+		stVars = append(stVars, v.Name)
+	}
 
-	addUserToCache(repo.cache, u)
+	return &solv.Statement{
+		Id:        dbs.Id,
+		Variables: stVars,
+		Equation:  dbs.Equation,
+		Value:     dbs.Value,
+	}, nil
+}
+
+func (repo userRepository) getHistoryWithTgID(ctx context.Context, tgID int64) (*History, *VMap, error) {
+	query := `SELECT  "statements".id, "statements".equation, "statements".value, "statements".created_at FROM "statements" INNER JOIN 
+		"users" ON "statements".user_id = "users".id
+		WHERE "users".tg_id = $1;`
+
+	return repo.getHistory(ctx, query, tgID)
+}
+
+func (repo userRepository) getHistoryWithDBuID(ctx context.Context, uID int) (*History, *VMap, error) {
+	query := `SELECT  "statements".id, "statements".equation, "statements".value, "statements".created_at FROM "statements" INNER JOIN 
+		"users" ON "statements".user_id = "users".id
+		WHERE "users".id = $1;`
+
+	return repo.getHistory(ctx, query, uID)
+}
+
+func (repo userRepository) getHistory(ctx context.Context, query string, id interface{}) (*History, *VMap, error) {
+
+	sts := []dbStatement{}
+
+	err := repo.db.Select(&sts, query, id)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "Select history request fail")
+	}
+
+	variables := VMap{}
+	h := make(History, len(sts))
+	for i, dbs := range sts {
+		s, err := repo.getFilledStatement(ctx, &dbs, &variables)
+		if err != nil {
+			return nil, nil, err
+		}
+		h[i] = *s
+	}
+	return &h, &variables, nil
+}
+
+func (repo userRepository) getFilledUser(ctx context.Context, user *dbUser) (*User, error) {
+
+	h, vs, err := repo.getHistoryWithDBuID(ctx, user.Id)
+	if err != nil {
+		return nil, errors.Wrap(err, "History fetch fail.")
+	}
+
+	return &User{user.Id, user.TgID, user.Password, h, *vs}, nil
+}
+
+func (repo userRepository) Add(ctx context.Context, tgID int64, password string) error {
+	query := `INSERT INTO users (tg_id, password, created_at)
+		VALUES ($1, $2, now());`
+
+	repo.db.MustExec(query, tgID, password)
 
 	return nil
 }
 
-func (repo *userRepository) AddStatements(ctx context.Context, userID int64, statement []*solv.Statement) error {
-	u, err := getUserFromCache(repo.cache, userID)
-	if !errors.As(err, &ItemNotFoundError{}) {
-		return errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
+func (repo userRepository) GetAll(ctx context.Context) (*[]User, error) {
+	query := `SELECT * FROM "users";`
+
+	dbUsers := []dbUser{}
+	err := repo.db.Select(&dbUsers, query)
+	if err != nil {
+		return nil, errors.Wrap(err, "Get request fail")
 	}
 
-	//*u.History = append(*u.History, *statement)
+	users := make([]User, len(dbUsers))
+	for i, dbu := range dbUsers {
+		u, err := repo.getFilledUser(ctx, &dbu)
+		if err != nil {
+			return nil, errors.Wrap(err, "User fill request fail.")
+		}
+		users[i] = *u
+	}
 
-	addUserToCache(repo.cache, u)
+	return &users, nil
+}
+
+func (repo *userRepository) Get(ctx context.Context, tgID int64) (*User, error) {
+
+	query := `SELECT * FROM "users" WHERE "users".tg_id = $1;`
+
+	dbu := dbUser{}
+	err := repo.db.Get(&dbu, query, tgID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Get request fail")
+	}
+
+	return repo.getFilledUser(context.TODO(), &dbu)
+}
+
+func (repo *userRepository) Update(ctx context.Context, tgID int64, password string) error {
+
+	query := `UPDATE "users"
+		SET password = $2
+		WHERE "users".tg_id = $1;`
+
+	repo.db.MustExec(query, tgID, password)
 
 	return nil
 }
 
-func (repo *userRepository) DeleteHistory(ctx context.Context, userID int64) error {
-	u, err := getUserFromCache(repo.cache, userID)
-	if !errors.As(err, &ItemNotFoundError{}) {
-		return errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-	}
+func (repo *userRepository) Delete(ctx context.Context, tgID int64) error {
 
-	*u.History = make([]solv.Statement, 0)
+	tx := repo.db.MustBegin()
 
-	addUserToCache(repo.cache, u)
+	query := `DELETE FROM "variables" 
+		WHERE "variables".id IN (
+			SELECT "variables".id
+			FROM "variables" INNER JOIN
+				"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
+				"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
+				"users"                 ON "statements".user_id                 = "users".id
+			WHERE "users".tg_id = $1
+		);`
+
+	tx.MustExec(query, tgID)
+
+	query = `DELETE FROM "statements" 
+		WHERE "statements".id IN (
+			SELECT "statements".id
+			FROM "statements" INNER JOIN "users" ON "statements".user_id = "users".id
+			WHERE "users".tg_id = $1
+		)`
+
+	tx.MustExec(query, tgID)
+
+	query = `DELETE FROM "users" WHERE "users".tg_id = $1`
+
+	tx.MustExec(query, tgID)
+
+	tx.Commit()
 
 	return nil
 }
 
-func (repo *userRepository) Exist(ctx context.Context, userID int64) bool {
-	return repo.cache.Exist(fmt.Sprintf("%v", userID))
-}
+func (repo *userRepository) GetHistory(ctx context.Context, tgID int64) (*History, error) {
 
-func (repo *userRepository) Clear(ctx context.Context, userID int64) error {
-	u, err := getUserFromCache(repo.cache, userID)
-	if !errors.As(err, &ItemNotFoundError{}) {
-		return errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
+	h, _, err := repo.getHistoryWithTgID(ctx, tgID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Get history from DB fail.")
 	}
 
-	*u.History = make([]solv.Statement, 0)
-	u.Variables = make(VMap)
+	return h, nil
+}
 
-	addUserToCache(repo.cache, u)
+func (repo *userRepository) AddStatement(ctx context.Context, tgID int64, statement *solv.Statement) error {
+	tx := repo.db.MustBegin()
+
+	query := `INSERT INTO statements (user_id, equation, value, created_at)
+			VALUES ((SELECT id FROM "users" WHERE "users".tg_id = $1), $2, $3, now()) RETURNING id;`
+
+	var newStID int
+	err := tx.Get(&newStID, query, tgID, statement.Equation, statement.Value)
+	if err != nil {
+		return errors.Wrap(err, "Add statement request to db fail")
+	}
+
+	//    UNION SELECT * FROM set_var(11111, 7, 'd', 8.0);
+
+	query = `select * from set_var($1, $2, $3, $4);`
+	for _, varName := range statement.Variables {
+		tx.MustExec(query, tgID, newStID, varName, statement.Value)
+	}
+
+	tx.Commit()
+
+	return nil
+}
+
+func (repo *userRepository) AddStatements(ctx context.Context, tgID int64, statement *[]solv.Statement) error {
+
+	ctx = context.TODO()
+	for _, s := range *statement {
+		err := repo.AddStatement(ctx, tgID, &s)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (repo *userRepository) Exist(ctx context.Context, tgID int64) (bool, error) {
+	query := `SELECT 1
+		FROM "users"
+		WHERE "users".tg_id = $1;
+		`
+	var res int
+	repo.db.Get(&res, query, tgID)
+
+	return res == 1, nil
+}
+
+func (repo *userRepository) Clear(ctx context.Context, tgID int64) error {
+
+	query := `DELETE FROM "variables" 
+		WHERE "variables".id IN (
+			SELECT "variables".id
+			FROM "variables" INNER JOIN
+				"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
+				"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
+				"users"                 ON "statements".user_id                 = "users".id
+			WHERE "users".tg_id = $1
+		);`
+
+	repo.db.MustExec(query, tgID)
+
+	query = `DELETE FROM "statements" 
+		WHERE "statements".id IN (
+			SELECT "statements".id
+			FROM "statements" INNER JOIN "users" ON "statements".user_id = "users".id
+			WHERE "users".tg_id = $1
+		);`
+
+	repo.db.MustExec(query, tgID)
 
 	return nil
 }
@@ -156,35 +326,17 @@ func NewVariableRepository(c *Cache, db *sqlx.DB) *variableRepository {
 	}
 }
 
-func (repo *variableRepository) Get(ctx context.Context, userID int64, name string) (float64, error) {
-	/*
-		u, err := getUserFromCache(repo.cache, userID)
+func (repo *variableRepository) Get(ctx context.Context, tgID int64, name string) (float64, error) {
 
-			var itemNotFoundError *ItemNotFoundError
-			if !errors.As(err, &itemNotFoundError) {
-				return 0.0, errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-			} else if err == nil {
-				v, ok := u.Variables[name]
-				if !ok {
-					return 0.0, errors.Wrap(err, fmt.Sprintf("Getting variable with id %s fail", name))
-				}
-				return v, nil
-			}
-	*/
+	query := `SELECT DISTINCT variables.name as "name", variables.value as "value"
+		FROM variables INNER JOIN
+			"statementsVariables"   ON "statementsVariables".variable_id    = variables.id INNER JOIN
+			statements            ON "statementsVariables".statement_id   = statements.id INNER JOIN
+			users                 ON statements.user_id                 = users.id
+		WHERE variables.name = $1 AND users.tg_id = $2 AND variables.value IS NOT NULL;`
 
-	type variable struct {
-		Value float64
-	}
-
-	query := `SELECT DISTINCT variables.value as "value"
-		FROM "variables" INNER JOIN
-			"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
-			"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
-			"users"                 ON "statements".user_id                 = "users".id
-		WHERE "variables".name = $1 AND "users".tg_id = $2;`
-
-	v := variable{}
-	err := repo.db.Get(&v, query, name, userID)
+	v := dbVariable{}
+	err := repo.db.Get(&v, query, name, tgID)
 	if err != nil {
 		return 0.0, errors.Wrap(err, "Get request fail")
 	}
@@ -192,35 +344,18 @@ func (repo *variableRepository) Get(ctx context.Context, userID int64, name stri
 	return v.Value, nil
 }
 
-func (repo *variableRepository) GetAll(ctx context.Context, userID int64) (VMap, error) {
+func (repo *variableRepository) GetAll(ctx context.Context, tgID int64) (VMap, error) {
 	res := VMap{}
-
-	/*
-		u, err := getUserFromCache(repo.cache, userID)
-
-		var itemNotFoundError *ItemNotFoundError
-		if !errors.As(err, &itemNotFoundError) {
-			return res, errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-		} else if err == nil {
-			vs := u.Variables
-			return vs, nil
-		}
-	*/
-
-	type variable struct {
-		Name  string
-		Value float64
-	}
 
 	query := `SELECT DISTINCT variables.name as "name", variables.value as "value"
 		FROM "variables" INNER JOIN
-			"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
-			"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
-			"users"                 ON "statements".user_id                 = "users".id
-		WHERE "users".tg_id = $1;`
+			"statementsVariables"   ON "statementsVariables".variable_id    = variables.id INNER JOIN
+			statements            ON "statementsVariables".statement_id   = statements.id INNER JOIN
+			users                 ON statements.user_id                 = users.id
+		WHERE users.tg_id = $1 AND variables.value IS NOT NULL;`
 
-	vs := []variable{}
-	err := repo.db.Select(&vs, query, userID)
+	vs := []dbVariable{}
+	err := repo.db.Select(&vs, query, tgID)
 	if err != nil {
 		return res, errors.Wrap(err, "Select request fail")
 	}
@@ -231,41 +366,17 @@ func (repo *variableRepository) GetAll(ctx context.Context, userID int64) (VMap,
 	return res, nil
 }
 
-func (repo *variableRepository) GetWithNames(ctx context.Context, userID int64, names []string) (VMap, error) {
+func (repo *variableRepository) GetWithNames(ctx context.Context, tgID int64, names []string) (VMap, error) {
 	res := VMap{}
 
-	/*
-		u, err := getUserFromCache(repo.cache, userID)
-
-		var itemNotFoundError *ItemNotFoundError
-		if !errors.As(err, &itemNotFoundError) {
-			return res, errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-		} else if err == nil {
-			for _, n := range names {
-				v, ok := u.Variables[n]
-				if !ok {
-					return nil, errors.Wrap(err, fmt.Sprintf("Getting variable with id %s fail", n))
-				}
-				res[n] = v
-			}
-
-			return res, nil
-		}
-	*/
-
-	type variable struct {
-		Name  string
-		Value float64
-	}
-
 	query := `SELECT DISTINCT variables.name as "name", variables.value as "value"
-			FROM "variables" INNER JOIN
-				"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
-				"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
-				"users"                 ON "statements".user_id                 = "users".id
-			WHERE "variables".name IN (?) AND "users".tg_id = ?;`
+		FROM variables INNER JOIN
+			"statementsVariables"   ON "statementsVariables".variable_id    = variables.id INNER JOIN
+			statements            ON "statementsVariables".statement_id   = statements.id INNER JOIN
+			users                 ON statements.user_id                 = users.id
+		WHERE variables.name IN (?) AND users.tg_id = ? AND variables.value IS NOT NULL;`
 
-	query, args, err := sqlx.In(query, names, userID)
+	query, args, err := sqlx.In(query, names, tgID)
 	if err != nil {
 		return res, errors.Wrap(err, "Query build fail")
 	}
@@ -273,7 +384,7 @@ func (repo *variableRepository) GetWithNames(ctx context.Context, userID int64, 
 	// sqlx.In returns queries with the `?` bindvar, we can rebind it for our backend
 	query = repo.db.Rebind(query)
 
-	vs := []variable{}
+	vs := []dbVariable{}
 	err = repo.db.Select(&vs, query, args...)
 	if err != nil {
 		return res, errors.Wrap(err, "Select request fail")
@@ -287,28 +398,20 @@ func (repo *variableRepository) GetWithNames(ctx context.Context, userID int64, 
 
 }
 
-func (repo *variableRepository) Update(ctx context.Context, userID int64, name string, value float64) error {
-	/*
-			cache
-		u.Variables[name] = value
+func (repo *variableRepository) Update(ctx context.Context, tgID int64, name string, value float64) error {
 
-		addUserToCache(repo.cache, u)
+	query := `UPDATE variables
+			SET value = $1
+			WHERE id = (
+				SELECT DISTINCT variables.id
+				FROM "variables" INNER JOIN
+					"statementsVariables"   ON "statementsVariables".variable_id    = variables.id INNER JOIN
+					statements            ON "statementsVariables".statement_id   = statements.id INNER JOIN
+					users                 ON statements.user_id                 = users.id
+			WHERE users.tg_id = $2 AND variables.name = $3
+			) RETURNING id;`
 
-
-	*/
-
-	query := `UPDATE "variables"
-		SET value = $1
-		WHERE EXISTS (
-			SELECT  *
-			FROM "variables" INNER JOIN
-				"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
-				"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
-				"users"                 ON "statements".user_id                 = "users".id
-		WHERE "users".tg_id = $2
-		) AND ("variables".name = $3);`
-
-	res := repo.db.MustExec(query, value, userID, name)
+	res := repo.db.MustExec(query, value, tgID, name)
 	am, err := res.RowsAffected()
 	if err != nil {
 		return errors.Wrap(err, "Update request fail")
@@ -319,33 +422,20 @@ func (repo *variableRepository) Update(ctx context.Context, userID int64, name s
 	return nil
 }
 
-func (repo *variableRepository) UpdateWithNames(ctx context.Context, userID int64, names []string, value float64) error {
-	/*
-		u, err := getUserFromCache(repo.cache, userID)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-		}
-
-		for i, n := range names {
-			u.Variables[n] = values[i]
-		}
-
-		addUserToCache(repo.cache, u)
-		return nil
-	*/
+func (repo *variableRepository) UpdateWithNames(ctx context.Context, tgID int64, names []string, value float64) error {
 
 	query := `UPDATE "variables"
 		SET value = ?
-		WHERE EXISTS (
-			SELECT  *
+		WHERE id IN (
+			SELECT "variables".id
 			FROM "variables" INNER JOIN
 				"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
 				"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
 				"users"                 ON "statements".user_id                 = "users".id
-		WHERE "users".tg_id = ?
-		) AND "variables".name IN (?);`
+		WHERE "users".tg_id = ? AND "variables".name IN (?)
+		) RETURNING id;`
 
-	query, args, err := sqlx.In(query, value, userID, names)
+	query, args, err := sqlx.In(query, value, tgID, names)
 	if err != nil {
 		return errors.Wrap(err, "Query build fail")
 	}
@@ -364,33 +454,21 @@ func (repo *variableRepository) UpdateWithNames(ctx context.Context, userID int6
 	return nil
 }
 
-func (repo *variableRepository) Delete(ctx context.Context, userID int64, name string) error {
-	/*
-		u, err := getUserFromCache(repo.cache, userID)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-		}
+func (repo *variableRepository) Delete(ctx context.Context, tgID int64, name string) error {
 
-		delete(u.Variables, name)
-
-		addUserToCache(repo.cache, u)
-
-		return nil
-	*/
-
-	query := `UPDATE "variables"
+	query := `UPDATE variables
 		SET value = NULL
-		WHERE EXISTS (
-			SELECT  *
-			FROM "variables" INNER JOIN
-				"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
-				"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
-				"users"                 ON "statements".user_id                 = "users".id
+		WHERE variables.id IN (
+			SELECT variables.id
+			FROM variables INNER JOIN
+				"statementsVariables"   ON "statementsVariables".variable_id    = variables.id INNER JOIN
+				statements            ON "statementsVariables".statement_id   = statements.id INNER JOIN
+				users                 ON statements.user_id                 = users.id
 
-			WHERE "users".tg_id = $1
-		) AND "variables".name=$2;`
+			WHERE users.tg_id = $1 AND variables.name = $2
+		) RETURNING id;`
 
-	res := repo.db.MustExec(query, userID, name)
+	res := repo.db.MustExec(query, tgID, name)
 	am, err := res.RowsAffected()
 	if err != nil {
 		return errors.Wrap(err, "Delete [Update] request fail")
@@ -401,33 +479,21 @@ func (repo *variableRepository) Delete(ctx context.Context, userID int64, name s
 	return nil
 }
 
-func (repo *variableRepository) DeleteWithNames(ctx context.Context, userID int64, names []string) error {
-	/*
-		u, err := getUserFromCache(repo.cache, userID)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-		}
+func (repo *variableRepository) DeleteWithNames(ctx context.Context, tgID int64, names []string) error {
 
-		for _, n := range names {
-			delete(u.Variables, n)
-		}
-
-		addUserToCache(repo.cache, u)
-		return nil
-	*/
-
-	query := `UPDATE "variables"
+	query := `UPDATE variables
 		SET value = NULL
-		WHERE EXISTS (
-			SELECT  *
-			FROM "variables" INNER JOIN
-				"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
-				"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
-				"users"                 ON "statements".user_id                 = "users".id
-		WHERE "users".tg_id = ?
-		) AND "variables".name IN (?);`
+		WHERE variables.id IN (
+			SELECT variables.id
+			FROM variables INNER JOIN
+				"statementsVariables"   ON "statementsVariables".variable_id    = variables.id INNER JOIN
+				statements            ON "statementsVariables".statement_id   = statements.id INNER JOIN
+				users                 ON statements.user_id                 = users.id
 
-	query, args, err := sqlx.In(query, userID, names)
+			WHERE users.tg_id = ? AND (variables.name IN (?))
+		) RETURNING id;`
+
+	query, args, err := sqlx.In(query, tgID, names)
 	if err != nil {
 		return errors.Wrap(err, "Query build fail")
 	}
@@ -446,31 +512,20 @@ func (repo *variableRepository) DeleteWithNames(ctx context.Context, userID int6
 	return nil
 }
 
-func (repo *variableRepository) DeleteAll(ctx context.Context, userID int64) error {
-	/*
-		u, err := getUserFromCache(repo.cache, userID)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", userID))
-		}
+func (repo *variableRepository) DeleteAll(ctx context.Context, tgID int64) error {
 
-		u.Variables = make(VMap)
-
-		addUserToCache(repo.cache, u)
-
-		return nil
-	*/
-	query := `UPDATE "variables"
+	query := `UPDATE variables
 		SET value = NULL
-		WHERE EXISTS (
-			SELECT  *
-			FROM "variables" INNER JOIN
-				"statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
-				"statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
-				"users"                 ON "statements".user_id                 = "users".id
-		WHERE "users".tg_id = $1
+		WHERE id IN (
+			SELECT  variables.id
+			FROM variables INNER JOIN
+				"statementsVariables"   ON "statementsVariables".variable_id    = variables.id INNER JOIN
+				statements            ON "statementsVariables".statement_id   = statements.id INNER JOIN
+				users                 ON statements.user_id                 = users.id
+			WHERE users.tg_id = $1
 		);`
 
-	res := repo.db.MustExec(query, userID)
+	res := repo.db.MustExec(query, tgID)
 	am, err := res.RowsAffected()
 	if err != nil {
 		return errors.Wrap(err, "Update request fail")

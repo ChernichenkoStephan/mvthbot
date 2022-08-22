@@ -1,6 +1,6 @@
 CREATE TABLE "users" (
   "id" bigserial PRIMARY KEY,
-  "tg_id" numeric NOT NULL,
+  "tg_id" numeric NOT NULL UNIQUE,
   "password" varchar NOT NULL,
   "created_at" timestamptz NOT NULL DEFAULT (now())
 );
@@ -54,7 +54,47 @@ GRANT ALL PRIVILEGES ON TABLE "statements" TO admin;
 GRANT ALL PRIVILEGES ON TABLE "variables" TO admin;
 GRANT ALL PRIVILEGES ON TABLE "statementsVariables" TO admin;
 
-
 GRANT USAGE, SELECT ON SEQUENCE statements_id_seq TO admin;
 GRANT USAGE, SELECT ON SEQUENCE variables_id_seq TO admin;
 GRANT USAGE, SELECT ON SEQUENCE users_id_seq TO admin;
+
+CREATE OR REPLACE FUNCTION set_var(u_tg_id BIGINT, statement_id BIGINT, var_name VARCHAR, var_val NUMERIC) RETURNS BIGINT AS $BODY$
+
+DECLARE var_id integer;
+
+BEGIN
+
+    IF (SELECT COUNT(*)
+        FROM "variables" INNER JOIN
+            "statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
+            "statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
+            "users"                 ON "statements".user_id                 = "users".id
+        WHERE "variables".name = var_name AND "users".tg_id = u_tg_id) THEN
+
+        SELECT "variables".id FROM "variables" INNER JOIN
+                    "statementsVariables"   ON "statementsVariables".variable_id    = "variables".id INNER JOIN
+                    "statements"            ON "statementsVariables".statement_id   = "statements".id INNER JOIN
+                    "users"                 ON "statements".user_id                 = "users".id
+            WHERE "users".tg_id = u_tg_id AND "variables".name = var_name INTO var_id;
+
+        UPDATE "variables"
+            SET value = var_val
+            WHERE id = var_id;
+
+        RETURN var_id;
+
+    ELSE 
+        WITH inserted_id AS (
+            INSERT INTO variables (name, value, created_at)
+            VALUES (var_name, var_val, now()) RETURNING id
+        ) SELECT * FROM inserted_id INTO var_id;
+
+        INSERT INTO "statementsVariables" (variable_id, statement_id)
+        VALUES (var_id, statement_id);
+
+       RETURN var_id;
+
+    END IF;
+
+END
+$BODY$ LANGUAGE 'plpgsql';

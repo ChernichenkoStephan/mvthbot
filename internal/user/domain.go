@@ -15,13 +15,13 @@ type History []solv.Statement
 type User struct {
 
 	// Internal DB id
-	id int
+	Id int `db:"id"`
 
 	// Telegram user id
-	TelegramID int64
+	TelegramID int64 `db:"tg_id"`
 
 	// Randomly generated password
-	Password string
+	Password string `db:"password"`
 
 	// History of solving
 	History *History
@@ -36,24 +36,22 @@ type User struct {
 //
 //
 type UserService interface {
-	Add(ctx context.Context, user *User) error
+	Add(ctx context.Context, tgID int64, password string) error
 
-	Get(ctx context.Context, userID int64) (*User, error)
+	Get(ctx context.Context, tgID int64) (*User, error)
 	GetAll(ctx context.Context) (*[]User, error)
 
-	Update(ctx context.Context, user *User) error
+	Update(ctx context.Context, tgID int64, password string) error
 
-	Delete(ctx context.Context, userID int64) error
+	Delete(ctx context.Context, tgID int64) error
 
-	AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error
-	AddStatements(ctx context.Context, userID int64, statement []*solv.Statement) error
+	AddStatement(ctx context.Context, tgID int64, statement *solv.Statement) error
+	AddStatements(ctx context.Context, tgID int64, statement *[]solv.Statement) error
 
-	GetHistory(ctx context.Context, userID int64) (*History, error)
+	GetHistory(ctx context.Context, tgID int64) (*History, error)
 
-	DeleteHistory(ctx context.Context, userID int64) error
-
-	Exist(ctx context.Context, userID int64) (bool, error)
-	Clear(ctx context.Context, userID int64) error
+	Exist(ctx context.Context, tgID int64) (bool, error)
+	Clear(ctx context.Context, tgID int64) error
 }
 
 //
@@ -62,24 +60,22 @@ type UserService interface {
 //
 //
 type UserRepository interface {
-	Add(ctx context.Context, user *User) error
+	Add(ctx context.Context, tgID int64, password string) error
 
-	Get(ctx context.Context, userID int64) (*User, error)
+	Get(ctx context.Context, tgID int64) (*User, error)
 	GetAll(ctx context.Context) (*[]User, error)
 
-	Update(ctx context.Context, user *User) error
+	Update(ctx context.Context, tgID int64, password string) error
 
-	Delete(ctx context.Context, userID int64) error
+	Delete(ctx context.Context, tgID int64) error
 
-	AddStatement(ctx context.Context, userID int64, statement *solv.Statement) error
-	AddStatements(ctx context.Context, userID int64, statement []*solv.Statement) error
+	AddStatement(ctx context.Context, tgID int64, statement *solv.Statement) error
+	AddStatements(ctx context.Context, tgID int64, statement *[]solv.Statement) error
 
-	GetHistory(ctx context.Context, userID int64) (*History, error)
+	GetHistory(ctx context.Context, tgID int64) (*History, error)
 
-	DeleteHistory(ctx context.Context, userID int64) error
-
-	Exist(ctx context.Context, userID int64) bool
-	Clear(ctx context.Context, userID int64) error
+	Exist(ctx context.Context, tgID int64) (bool, error)
+	Clear(ctx context.Context, tgID int64) error
 }
 
 //
@@ -88,16 +84,16 @@ type UserRepository interface {
 //
 //
 type VariableService interface {
-	Get(ctx context.Context, userID int64, name string) (float64, error)
-	GetWithNames(ctx context.Context, userID int64, names []string) (VMap, error)
-	GetAll(ctx context.Context, userID int64) (VMap, error)
+	Get(ctx context.Context, tgID int64, name string) (float64, error)
+	GetWithNames(ctx context.Context, tgID int64, names []string) (VMap, error)
+	GetAll(ctx context.Context, tgID int64) (VMap, error)
 
-	Update(ctx context.Context, userID int64, name string, value float64) error
-	UpdateWithNames(ctx context.Context, userID int64, names []string, value float64) error
+	Update(ctx context.Context, tgID int64, name string, value float64) error
+	UpdateWithNames(ctx context.Context, tgID int64, names []string, value float64) error
 
-	Delete(ctx context.Context, userID int64, name string) error
-	DeleteWithNames(ctx context.Context, userID int64, names []string) error
-	DeleteAll(ctx context.Context, userID int64) error
+	Delete(ctx context.Context, tgID int64, name string) error
+	DeleteWithNames(ctx context.Context, tgID int64, names []string) error
+	DeleteAll(ctx context.Context, tgID int64) error
 }
 
 //
@@ -106,16 +102,16 @@ type VariableService interface {
 //
 //
 type VariableRepository interface {
-	Get(ctx context.Context, userID int64, name string) (float64, error)
-	GetWithNames(ctx context.Context, userID int64, names []string) (VMap, error)
-	GetAll(ctx context.Context, userID int64) (VMap, error)
+	Get(ctx context.Context, tgID int64, name string) (float64, error)
+	GetWithNames(ctx context.Context, tgID int64, names []string) (VMap, error)
+	GetAll(ctx context.Context, tgID int64) (VMap, error)
 
-	Update(ctx context.Context, userID int64, name string, value float64) error
-	UpdateWithNames(ctx context.Context, userID int64, names []string, value float64) error
+	Update(ctx context.Context, tgID int64, name string, value float64) error
+	UpdateWithNames(ctx context.Context, tgID int64, names []string, value float64) error
 
-	Delete(ctx context.Context, userID int64, name string) error
-	DeleteWithNames(ctx context.Context, userID int64, names []string) error
-	DeleteAll(ctx context.Context, userID int64) error
+	Delete(ctx context.Context, tgID int64, name string) error
+	DeleteWithNames(ctx context.Context, tgID int64, names []string) error
+	DeleteAll(ctx context.Context, tgID int64) error
 }
 
 //

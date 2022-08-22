@@ -14,7 +14,7 @@ func (u User) Copy() *User {
 		vs[k] = v
 	}
 	return &User{
-		id:         u.id,
+		Id:         u.Id,
 		TelegramID: u.TelegramID,
 		History:    &h,
 		Variables:  vs,
@@ -23,7 +23,7 @@ func (u User) Copy() *User {
 
 func (u User) String() string {
 	return fmt.Sprintf("{\n\tID: %d,\n\tTID: %d,\n\tHistory: %v,\n\tVariables: %v\n}",
-		u.id, u.TelegramID, u.History, u.Variables)
+		u.Id, u.TelegramID, u.History, u.Variables)
 }
 
 func NewUser(id int64) *User {

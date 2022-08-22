@@ -85,7 +85,7 @@ func UserCheck(userService user.UserService) tele.MiddlewareFunc {
 				}
 				if !ok {
 					u := user.NewUser(c.Message().Sender.ID)
-					userService.Add(ctx, u)
+					userService.Add(ctx, u.TelegramID, u.Password)
 				}
 			}
 			return next(c)

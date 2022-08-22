@@ -303,7 +303,7 @@ func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 
 func (h *historyHandler) DeleteHistory(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
-	if err := h.userService.DeleteHistory(context.TODO(), uID); err != nil {
+	if err := h.userService.Clear(context.TODO(), uID); err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})

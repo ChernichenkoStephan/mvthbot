@@ -6,3 +6,5 @@ DROP TABLE IF EXISTS "statements";
 DROP TABLE IF EXISTS "variables";
 DROP TABLE IF EXISTS "statementsVariables";
 DROP TABLE IF EXISTS "users";
+
+DROP FUNCTION IF EXISTS set_var;

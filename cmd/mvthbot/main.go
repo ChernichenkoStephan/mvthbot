@@ -4,11 +4,31 @@ import (
 	"context"
 	"fmt"
 
+	"emperror.dev/errors"
 	"github.com/ChernichenkoStephan/mvthbot/internal/app"
-	"github.com/go-faster/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
+
+func step(e error, opName string, res interface{}) bool {
+	if e != nil {
+		fmt.Println(e)
+		return false
+	} else {
+		fmt.Println(opName, " SUCCESS")
+	}
+	fmt.Println(res)
+	fmt.Println("next?")
+	o, err := fmt.Scanln()
+	if err != nil {
+		fmt.Println(err)
+		return false
+	} else if o != 0 {
+		return false
+	}
+	fmt.Println(o)
+	return true
+}
 
 func main() {
 
@@ -21,27 +41,15 @@ func main() {
 			return errors.Wrap(err, "App init failed")
 		}
 
-		//err = app.variableRepository.Delete(context.TODO(), 11111, `a`)
-		//err = app.variableRepository.DeleteWithNames(context.TODO(), 11111, []string{`a`, `b`})
-		err = app.variableRepository.DeleteAll(context.TODO(), 11111)
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Println("SUCCESS")
-		}
-		//fmt.Printf("%#v\n", v)
+		// Run API
+		g.Go(func() error {
+			return runAPI(app)
+		})
 
-		/*
-			// Run API
-			g.Go(func() error {
-				return runAPI(app)
-			})
-
-			// Run Bot
-			g.Go(func() error {
-				return runBot(app)
-			})
-		*/
+		// Run Bot
+		g.Go(func() error {
+			return runBot(app)
+		})
 
 		return g.Wait()
 	})

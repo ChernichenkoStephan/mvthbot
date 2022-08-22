@@ -3,7 +3,7 @@ package solving
 type Statement struct {
 
 	// Internal DB id
-	id int
+	Id int
 
 	// variables to set
 	// example: a = b = 2 + 2 >> Variables = ["a", "b"]

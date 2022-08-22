@@ -38,19 +38,10 @@ A service-bot with users, variables, and calculation history support to solve eq
         - [ ] Gateway (Nginx & REST & grpc)
         - [ ] Auth
     - [ ] messaging (using ThreeDotsLabs/watermill)
-- [ ] mvthbot 3.0
     - [ ] Proper testing
         - [ ] Tests refactoring
         - [ ] Coverage increase
         - [ ] Load testing
-    - [ ] CI/CD
-        - [ ] Docker-compose
-        - [ ] Kubernetes
-        - [ ] Ansible
-        - [ ] Jenkins
-        - [ ] GitHub Actions
-    - [ ] Dashboard (using GoAdminGroup/go-admin)
-    - [ ] Rewrite DB with codegen
 
 ## Project structure
 

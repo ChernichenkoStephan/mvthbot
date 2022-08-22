@@ -56,7 +56,7 @@ func (b *Bot) Broadcast(message string) error {
 func (b *Bot) process(ctx context.Context, uID int64, statements interface{}) (string, error) {
 	sts, ok := statements.([]slv.Statement)
 	if !ok {
-		return "", fmt.Errorf("Got error during arg parsing %v", sts)
+		return "", fmt.Errorf("got error during arg parsing %v", sts)
 	}
 
 	builder := NewOutputBuilder()
@@ -83,15 +83,9 @@ func (b *Bot) process(ctx context.Context, uID int64, statements interface{}) (s
 		}
 		s.Value = res
 
-		c := context.TODO()
-
-		if err != nil {
-			msg := "Variables add with names failed"
-			return "", errors.Wrap(err, msg)
-		}
 		builder.Write(&s)
 
-		c = context.TODO()
+		c := context.TODO()
 		err = b.userService.AddStatement(c, uID, &s)
 		if err != nil {
 			msg := "Statements add failed"
