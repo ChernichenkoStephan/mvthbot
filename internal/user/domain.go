@@ -2,7 +2,10 @@ package user
 
 import (
 	"context"
+	"sync"
 	"time"
+
+	"database/sql"
 
 	solv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
 	"go.uber.org/zap"
@@ -30,11 +33,33 @@ type User struct {
 	Variables VMap
 }
 
+type DB interface {
+	Select(dest interface{}, query string, args ...interface{}) error
+	MustExec(query string, args ...interface{}) sql.Result
+	Get(dest interface{}, query string, args ...interface{}) error
+	Rebind(query string) string
+}
+
+type connKey struct{}
+
+type Connection struct {
+	mx       sync.Mutex
+	refCount uint
+
+	DB
+}
+
+type Connector interface {
+	WithConnection(ctx context.Context) (*Connection, context.Context)
+}
+
 type Database struct {
 	usersRepo UserRepository
 	varsRepo  VariableRepository
 
 	cache Cache
+
+	conn Connector
 
 	lg *zap.SugaredLogger
 }
@@ -110,7 +135,7 @@ func (e ItemNotFoundError) Error() string {
 
 //
 //
-//  Data types for views
+//  DTO's for views
 //
 //
 
@@ -121,4 +146,29 @@ type StatementDTO struct {
 
 type VariablesPackDTO struct {
 	statements []StatementDTO `validate:"required"`
+}
+
+//
+//
+// DTO's for DB requests
+//
+//
+
+type dbVariable struct {
+	Name  string  `db:"name"`
+	Value float64 `db:"value"`
+}
+
+type dbUser struct {
+	Id       int    `db:"id"`
+	TgID     int64  `db:"tg_id"`
+	Password string `db:"password"`
+	Created  string `db:"created_at"`
+}
+
+type dbStatement struct {
+	Id       int     `db:"id"`
+	Equation string  `db:"equation"`
+	Value    float64 `db:"value"`
+	Created  string  `db:"created_at"`
 }

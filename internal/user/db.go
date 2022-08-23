@@ -7,6 +7,7 @@ import (
 
 	"emperror.dev/errors"
 	solv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
+	"github.com/labstack/gommon/log"
 	"go.uber.org/zap"
 )
 
@@ -41,11 +42,12 @@ func (db Database) userToCache(user *User) error {
 	return nil
 }
 
-func NewDB(usersRepo UserRepository, varsRepo VariableRepository, cache Cache, logger *zap.SugaredLogger) *Database {
+func NewDB(usersRepo UserRepository, varsRepo VariableRepository, cache Cache, conn Connector, logger *zap.SugaredLogger) *Database {
 	return &Database{
 		usersRepo: usersRepo,
 		varsRepo:  varsRepo,
 		cache:     cache,
+		conn:      conn,
 		lg:        logger,
 	}
 }
@@ -350,6 +352,18 @@ func (db Database) DeleteAllVariables(ctx context.Context, tgID int64) error {
 	return nil
 }
 
+func (db Database) WithinTransaction(ctx context.Context, f func(ctx context.Context) error) error {
+	c, ctx := db.conn.WithConnection(ctx)
+	c.Bind()
+	defer c.Release()
+
+	err := f(ctx)
+	if err != nil {
+		return errors.Wrap(err, `Error during transaction`)
+	}
+	return nil
+}
+
 func step(e error, opName string, res interface{}) bool {
 	if e != nil {
 		fmt.Println(e)
@@ -370,10 +384,9 @@ func step(e error, opName string, res interface{}) bool {
 	return true
 }
 
-func users(db *Database) error {
+func users(ctx context.Context, db *Database) error {
 	db.lg.Info("Urepo")
 
-	ctx := context.TODO()
 	s := &solv.Statement{
 		Variables: []string{`r`, `g`},
 		Equation:  "777",
@@ -428,22 +441,19 @@ func users(db *Database) error {
 	return nil
 }
 
-func vars(db *Database) error {
-	_, err := db.GetAll(context.TODO())
+func vars(ctx context.Context, db *Database) error {
+	_, err := db.GetAll(ctx)
 	if err != nil {
 		return err
 	}
 
 	db.lg.Info("Vrepo")
 
-	ctx := context.TODO()
-
 	v, err := db.GetVariable(ctx, 11111, `a`)
 	if !step(err, "Get", v) {
 		return err
 	}
 
-	// GetWithNames(ctx context.Context, tgID int64, names []string) (VMap, error)
 	vs, err := db.GetVariablesWithNames(ctx, 11111, []string{`a`, `c`})
 	if !step(err, "GetWithNames", vs) {
 		return err
@@ -480,20 +490,33 @@ func vars(db *Database) error {
 	return nil
 }
 
+func trans(ctx context.Context, db *Database) error {
+	return db.WithinTransaction(ctx, func(ctx context.Context) error {
+		log.Info("WithinTransaction")
+		return users(ctx, db)
+	})
+}
+
 const (
 	DUMMY_VAR_RUN = iota
 	DUMMY_USER_RUN
+	DUMMY_TRANS_RUN
 )
 
-func DummyRun(db *Database, choice int) error {
+func DummyRun(ctx context.Context, db *Database, choice int) error {
 	switch choice {
 	case DUMMY_USER_RUN:
-		err := users(db)
+		err := users(ctx, db)
 		if err != nil {
 			return err
 		}
 	case DUMMY_VAR_RUN:
-		err := vars(db)
+		err := vars(ctx, db)
+		if err != nil {
+			return err
+		}
+	case DUMMY_TRANS_RUN:
+		err := trans(ctx, db)
 		if err != nil {
 			return err
 		}

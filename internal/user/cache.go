@@ -14,7 +14,7 @@ type inMemoryCache struct {
 	defaultExpiration time.Duration
 	cleanupInterval   time.Duration
 
-	sync.RWMutex
+	mx    sync.RWMutex
 	items map[string]Item
 }
 
@@ -49,9 +49,9 @@ func (c *inMemoryCache) Set(key string, value interface{}, duration time.Duratio
 		expiration = time.Now().Add(duration).UnixNano()
 	}
 
-	c.Lock()
+	c.mx.Lock()
 
-	defer c.Unlock()
+	defer c.mx.Unlock()
 
 	c.items[key] = Item{
 		Value:      value,
@@ -63,9 +63,9 @@ func (c *inMemoryCache) Set(key string, value interface{}, duration time.Duratio
 
 func (c *inMemoryCache) Get(key string) (interface{}, error) {
 
-	c.RLock()
+	c.mx.RLock()
 
-	defer c.RUnlock()
+	defer c.mx.RUnlock()
 
 	item, found := c.items[key]
 
@@ -86,9 +86,9 @@ func (c *inMemoryCache) Get(key string) (interface{}, error) {
 
 func (c *inMemoryCache) Delete(key string) error {
 
-	c.Lock()
+	c.mx.Lock()
 
-	defer c.Unlock()
+	defer c.mx.Unlock()
 
 	if _, found := c.items[key]; !found {
 		return &ItemNotFoundError{}
@@ -101,9 +101,9 @@ func (c *inMemoryCache) Delete(key string) error {
 
 func (c *inMemoryCache) Count() int {
 
-	c.Lock()
+	c.mx.Lock()
 
-	defer c.Unlock()
+	defer c.mx.Unlock()
 
 	l := len(c.items)
 
@@ -112,9 +112,9 @@ func (c *inMemoryCache) Count() int {
 
 func (c *inMemoryCache) Rename(prewKey, newKey string) error {
 
-	c.Lock()
+	c.mx.Lock()
 
-	defer c.Unlock()
+	defer c.mx.Unlock()
 
 	i, found := c.items[prewKey]
 	if !found {
@@ -128,9 +128,9 @@ func (c *inMemoryCache) Rename(prewKey, newKey string) error {
 }
 
 func (c *inMemoryCache) Exist(key string) bool {
-	c.RLock()
+	c.mx.RLock()
 
-	defer c.RUnlock()
+	defer c.mx.RUnlock()
 
 	_, found := c.items[key]
 
@@ -139,9 +139,9 @@ func (c *inMemoryCache) Exist(key string) bool {
 
 func (c *inMemoryCache) FlushAll() int {
 
-	c.Lock()
+	c.mx.Lock()
 
-	defer c.Unlock()
+	defer c.mx.Unlock()
 
 	am := len(c.items)
 	c.items = make(map[string]Item, 0)
@@ -173,9 +173,9 @@ func (c *inMemoryCache) gc() {
 
 func (c *inMemoryCache) expiredKeys() (keys []string) {
 
-	c.RLock()
+	c.mx.RLock()
 
-	defer c.RUnlock()
+	defer c.mx.RUnlock()
 
 	for k, i := range c.items {
 		if time.Now().UnixNano() > i.Expiration && i.Expiration > 0 {
@@ -188,9 +188,9 @@ func (c *inMemoryCache) expiredKeys() (keys []string) {
 
 func (c *inMemoryCache) clearItems(keys []string) {
 
-	c.Lock()
+	c.mx.Lock()
 
-	defer c.Unlock()
+	defer c.mx.Unlock()
 
 	for _, k := range keys {
 		delete(c.items, k)

@@ -35,8 +35,7 @@ func (b *Bot) GetUserID(username string) (int64, error) {
 	return 11111, nil
 }
 
-func (b *Bot) Broadcast(message string) error {
-	ctx := context.TODO()
+func (b *Bot) Broadcast(ctx context.Context, message string) error {
 	users, err := b.db.GetAll(ctx)
 	if err != nil {
 		return err
@@ -59,41 +58,48 @@ func (b *Bot) process(ctx context.Context, uID int64, statements interface{}) (s
 
 	builder := NewOutputBuilder()
 
-	vs, err := b.db.GetAllVariables(context.TODO(), uID)
+	err := b.db.WithinTransaction(ctx, func(ctx context.Context) error {
+		vs, err := b.db.GetAllVariables(ctx, uID)
+		if err != nil {
+			msg := "DB get all variables failed"
+			return errors.Wrap(err, msg)
+		}
+
+		for _, s := range sts {
+
+			fixed := b.stringFixer.Fix(s.Equation)
+
+			eq, err := converting.ToRPN(fixed)
+			if err != nil {
+				msg := "Converting to RPN failed"
+				return errors.Wrap(err, msg)
+			}
+			res, err := slv.Solve(eq, vs)
+			if err != nil {
+				msg := "Solving failed"
+				return errors.Wrap(err, msg)
+			}
+			s.Value = res
+
+			builder.Write(&s)
+
+			err = b.db.AddStatement(ctx, uID, &s)
+			if err != nil {
+				msg := "Statements add failed"
+				return errors.Wrap(err, msg)
+			}
+
+			for _, n := range s.Variables {
+				vs[n] = res
+			}
+
+		}
+		return nil
+	})
+
 	if err != nil {
-		msg := "DB get all variables failed"
-		return "", errors.Wrap(err, msg)
+		return "", err
 	}
 
-	for _, s := range sts {
-
-		fixed := b.stringFixer.Fix(s.Equation)
-
-		eq, err := converting.ToRPN(fixed)
-		if err != nil {
-			msg := "Converting to RPN failed"
-			return "", errors.Wrap(err, msg)
-		}
-		res, err := slv.Solve(eq, vs)
-		if err != nil {
-			msg := "Solving failed"
-			return "", errors.Wrap(err, msg)
-		}
-		s.Value = res
-
-		builder.Write(&s)
-
-		c := context.TODO()
-		err = b.db.AddStatement(c, uID, &s)
-		if err != nil {
-			msg := "Statements add failed"
-			return "", errors.Wrap(err, msg)
-		}
-
-		for _, n := range s.Variables {
-			vs[n] = res
-		}
-
-	}
 	return builder.String(), nil
 }

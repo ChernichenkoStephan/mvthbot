@@ -11,37 +11,22 @@ import (
 
 var itemNotFoundErr *ItemNotFoundError = &ItemNotFoundError{}
 
-// Get variables
-type dbVariable struct {
-	Name  string  `db:"name"`
-	Value float64 `db:"value"`
-}
-
-type dbUser struct {
-	Id       int    `db:"id"`
-	TgID     int64  `db:"tg_id"`
-	Password string `db:"password"`
-	Created  string `db:"created_at"`
-}
-
-type dbStatement struct {
-	Id       int     `db:"id"`
-	Equation string  `db:"equation"`
-	Value    float64 `db:"value"`
-	Created  string  `db:"created_at"`
-}
-
 type userRepository struct {
 	cache Cache
-	db    *sqlx.DB
+	sql   *sqlx.DB
 }
 
 func NewUserRepository(c Cache, db *sqlx.DB) *userRepository {
 	return &userRepository{
 		cache: c,
-		db:    db,
+		sql:   db,
 	}
 }
+
+func (repo userRepository) WithConnection(ctx context.Context) (*Connection, context.Context) {
+	return withConnection(ctx, repo.sql)
+}
+
 func (repo userRepository) getFilledStatement(ctx context.Context, dbs *dbStatement, variables *VMap) (*solv.Statement, error) {
 
 	query := `SELECT DISTINCT variables.name as "name", variables.value as "value"
@@ -52,7 +37,11 @@ func (repo userRepository) getFilledStatement(ctx context.Context, dbs *dbStatem
 		WHERE "statements".id = $1;`
 
 	dbVars := []dbVariable{}
-	err := repo.db.Select(&dbVars, query, dbs.Id)
+
+	db := getConnection(ctx, repo.sql)
+
+	err := db.Select(&dbVars, query, dbs.Id)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "Select vars request fail")
 	}
@@ -74,7 +63,8 @@ func (repo userRepository) getFilledStatement(ctx context.Context, dbs *dbStatem
 func (repo userRepository) getHistoryWithTgID(ctx context.Context, tgID int64) (*History, *VMap, error) {
 	query := `SELECT  "statements".id, "statements".equation, "statements".value, "statements".created_at FROM "statements" INNER JOIN 
 		"users" ON "statements".user_id = "users".id
-		WHERE "users".tg_id = $1;`
+		WHERE "users".tg_id = $1
+		ORDER BY statements.created_at;`
 
 	return repo.getHistory(ctx, query, tgID)
 }
@@ -88,10 +78,14 @@ func (repo userRepository) getHistoryWithDBuID(ctx context.Context, uID int) (*H
 }
 
 func (repo userRepository) getHistory(ctx context.Context, query string, id interface{}) (*History, *VMap, error) {
+	db, ctx := withConnection(ctx, repo.sql)
+
+	db.Bind()
+	defer db.Release()
 
 	sts := []dbStatement{}
 
-	err := repo.db.Select(&sts, query, id)
+	err := db.Select(&sts, query, id)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Select history request fail")
 	}
@@ -119,20 +113,26 @@ func (repo userRepository) getFilledUser(ctx context.Context, user *dbUser) (*Us
 }
 
 func (repo userRepository) Add(ctx context.Context, tgID int64, password string) error {
+	db := getConnection(ctx, repo.sql)
 
 	query := `INSERT INTO users (tg_id, password, created_at)
 		VALUES ($1, $2, now());`
 
-	repo.db.MustExec(query, tgID, password)
+	db.MustExec(query, tgID, password)
 
 	return nil
 }
 
 func (repo userRepository) GetAll(ctx context.Context) (*[]User, error) {
+	db, ctx := withConnection(ctx, repo.sql)
+
+	db.Bind()
+	defer db.Release()
+
 	query := `SELECT * FROM "users";`
 
 	dbUsers := []dbUser{}
-	err := repo.db.Select(&dbUsers, query)
+	err := db.Select(&dbUsers, query)
 	if err != nil {
 		return nil, errors.Wrap(err, "Get request fail")
 	}
@@ -149,16 +149,20 @@ func (repo userRepository) GetAll(ctx context.Context) (*[]User, error) {
 }
 
 func (repo *userRepository) Get(ctx context.Context, tgID int64) (*User, error) {
+	db, ctx := withConnection(ctx, repo.sql)
+
+	db.Bind()
+	defer db.Release()
 
 	query := `SELECT * FROM "users" WHERE "users".tg_id = $1;`
 
 	dbu := dbUser{}
-	err := repo.db.Get(&dbu, query, tgID)
+	err := db.Get(&dbu, query, tgID)
 	if err != nil {
 		return nil, errors.Wrap(err, "Get request fail")
 	}
 
-	u, err := repo.getFilledUser(context.TODO(), &dbu)
+	u, err := repo.getFilledUser(ctx, &dbu)
 	if err != nil {
 		return nil, errors.Wrap(err, `User additional requests fail`)
 	}
@@ -167,18 +171,22 @@ func (repo *userRepository) Get(ctx context.Context, tgID int64) (*User, error) 
 }
 
 func (repo *userRepository) Update(ctx context.Context, tgID int64, password string) error {
+	db := getConnection(ctx, repo.sql)
 
 	query := `UPDATE "users"
 		SET password = $2
 		WHERE "users".tg_id = $1;`
 
-	repo.db.MustExec(query, tgID, password)
+	db.MustExec(query, tgID, password)
 
 	return nil
 }
 
 func (repo *userRepository) Delete(ctx context.Context, tgID int64) error {
-	tx := repo.db.MustBegin()
+	db, _ := withConnection(ctx, repo.sql)
+
+	db.Bind()
+	defer db.Release()
 
 	query := `DELETE FROM "variables" 
 		WHERE "variables".id IN (
@@ -190,7 +198,7 @@ func (repo *userRepository) Delete(ctx context.Context, tgID int64) error {
 			WHERE "users".tg_id = $1
 		);`
 
-	tx.MustExec(query, tgID)
+	db.MustExec(query, tgID)
 
 	query = `DELETE FROM "statements" 
 		WHERE "statements".id IN (
@@ -199,13 +207,11 @@ func (repo *userRepository) Delete(ctx context.Context, tgID int64) error {
 			WHERE "users".tg_id = $1
 		)`
 
-	tx.MustExec(query, tgID)
+	db.MustExec(query, tgID)
 
 	query = `DELETE FROM "users" WHERE "users".tg_id = $1`
 
-	tx.MustExec(query, tgID)
-
-	tx.Commit()
+	db.MustExec(query, tgID)
 
 	return nil
 }
@@ -220,39 +226,46 @@ func (repo *userRepository) GetHistory(ctx context.Context, tgID int64) (*Histor
 }
 
 func (repo *userRepository) AddStatement(ctx context.Context, tgID int64, statement *solv.Statement) error {
-	tx := repo.db.MustBegin()
+	db, _ := withConnection(ctx, repo.sql)
+
+	db.Bind()
+	defer db.Release()
 
 	query := `INSERT INTO statements (user_id, equation, value, created_at)
 			VALUES ((SELECT id FROM "users" WHERE "users".tg_id = $1), $2, $3, now()) RETURNING id;`
 
 	var newStID int
-	err := tx.Get(&newStID, query, tgID, statement.Equation, statement.Value)
+	err := db.Get(&newStID, query, tgID, statement.Equation, statement.Value)
 	if err != nil {
 		return errors.Wrap(err, "Add statement request to db fail")
 	}
 
 	query = `select * from set_var($1, $2, $3, $4);`
 	for _, varName := range statement.Variables {
-		tx.MustExec(query, tgID, newStID, varName, statement.Value)
+		db.MustExec(query, tgID, newStID, varName, statement.Value)
 	}
-
-	tx.Commit()
 
 	return nil
 }
 
 func (repo *userRepository) Exist(ctx context.Context, tgID int64) (bool, error) {
+	db := getConnection(ctx, repo.sql)
+
 	query := `SELECT 1
 		FROM "users"
 		WHERE "users".tg_id = $1;
 		`
 	var res int
-	repo.db.Get(&res, query, tgID)
+	db.Get(&res, query, tgID)
 
 	return res == 1, nil
 }
 
 func (repo *userRepository) Clear(ctx context.Context, tgID int64) error {
+	db, _ := withConnection(ctx, repo.sql)
+
+	db.Bind()
+	defer db.Release()
 
 	query := `DELETE FROM "variables" 
 		WHERE "variables".id IN (
@@ -264,7 +277,7 @@ func (repo *userRepository) Clear(ctx context.Context, tgID int64) error {
 			WHERE "users".tg_id = $1
 		);`
 
-	repo.db.MustExec(query, tgID)
+	db.MustExec(query, tgID)
 
 	query = `DELETE FROM "statements" 
 		WHERE "statements".id IN (
@@ -273,30 +286,35 @@ func (repo *userRepository) Clear(ctx context.Context, tgID int64) error {
 			WHERE "users".tg_id = $1
 		);`
 
-	repo.db.MustExec(query, tgID)
+	db.MustExec(query, tgID)
 
 	return nil
 }
 
 //
 //
-//
+// Variables part
 //
 //
 
 type variableRepository struct {
 	cache Cache
-	db    *sqlx.DB
+	sql   *sqlx.DB
 }
 
 func NewVariableRepository(c Cache, db *sqlx.DB) *variableRepository {
 	return &variableRepository{
 		cache: c,
-		db:    db,
+		sql:   db,
 	}
 }
 
+func (repo variableRepository) WithConnection(ctx context.Context, db *sqlx.DB) (*Connection, context.Context) {
+	return withConnection(ctx, repo.sql)
+}
+
 func (repo *variableRepository) Get(ctx context.Context, tgID int64, name string) (float64, error) {
+	db := getConnection(ctx, repo.sql)
 
 	query := `SELECT DISTINCT variables.name as "name", variables.value as "value"
 		FROM variables INNER JOIN
@@ -306,7 +324,7 @@ func (repo *variableRepository) Get(ctx context.Context, tgID int64, name string
 		WHERE variables.name = $1 AND users.tg_id = $2 AND variables.value IS NOT NULL;`
 
 	v := dbVariable{}
-	err := repo.db.Get(&v, query, name, tgID)
+	err := db.Get(&v, query, name, tgID)
 	if err != nil {
 		return 0.0, errors.Wrap(err, "Get request fail")
 	}
@@ -315,6 +333,8 @@ func (repo *variableRepository) Get(ctx context.Context, tgID int64, name string
 }
 
 func (repo *variableRepository) GetAll(ctx context.Context, tgID int64) (VMap, error) {
+	db := getConnection(ctx, repo.sql)
+
 	res := VMap{}
 
 	query := `SELECT DISTINCT variables.name as "name", variables.value as "value"
@@ -325,7 +345,7 @@ func (repo *variableRepository) GetAll(ctx context.Context, tgID int64) (VMap, e
 		WHERE users.tg_id = $1 AND variables.value IS NOT NULL;`
 
 	vs := []dbVariable{}
-	err := repo.db.Select(&vs, query, tgID)
+	err := db.Select(&vs, query, tgID)
 	if err != nil {
 		return res, errors.Wrap(err, "Select request fail")
 	}
@@ -337,6 +357,8 @@ func (repo *variableRepository) GetAll(ctx context.Context, tgID int64) (VMap, e
 }
 
 func (repo *variableRepository) GetWithNames(ctx context.Context, tgID int64, names []string) (VMap, error) {
+	db := getConnection(ctx, repo.sql)
+
 	res := VMap{}
 
 	query := `SELECT DISTINCT variables.name as "name", variables.value as "value"
@@ -352,10 +374,10 @@ func (repo *variableRepository) GetWithNames(ctx context.Context, tgID int64, na
 	}
 
 	// sqlx.In returns queries with the `?` bindvar, we can rebind it for our backend
-	query = repo.db.Rebind(query)
+	query = db.Rebind(query)
 
 	vs := []dbVariable{}
-	err = repo.db.Select(&vs, query, args...)
+	err = db.Select(&vs, query, args...)
 	if err != nil {
 		return res, errors.Wrap(err, "Select request fail")
 	}
@@ -369,6 +391,7 @@ func (repo *variableRepository) GetWithNames(ctx context.Context, tgID int64, na
 }
 
 func (repo *variableRepository) Update(ctx context.Context, tgID int64, name string, value float64) error {
+	db := getConnection(ctx, repo.sql)
 
 	query := `UPDATE variables
 			SET value = $1
@@ -381,7 +404,7 @@ func (repo *variableRepository) Update(ctx context.Context, tgID int64, name str
 			WHERE users.tg_id = $2 AND variables.name = $3
 			) RETURNING id;`
 
-	res := repo.db.MustExec(query, value, tgID, name)
+	res := db.MustExec(query, value, tgID, name)
 	am, err := res.RowsAffected()
 	if err != nil {
 		return errors.Wrap(err, "Update request fail")
@@ -393,6 +416,7 @@ func (repo *variableRepository) Update(ctx context.Context, tgID int64, name str
 }
 
 func (repo *variableRepository) UpdateWithNames(ctx context.Context, tgID int64, names []string, value float64) error {
+	db := getConnection(ctx, repo.sql)
 
 	query := `UPDATE "variables"
 		SET value = ?
@@ -411,9 +435,9 @@ func (repo *variableRepository) UpdateWithNames(ctx context.Context, tgID int64,
 	}
 
 	// sqlx.In returns queries with the `?` bindvar, we can rebind it for our backend
-	query = repo.db.Rebind(query)
+	query = db.Rebind(query)
 
-	res := repo.db.MustExec(query, args...)
+	res := db.MustExec(query, args...)
 	am, err := res.RowsAffected()
 	if err != nil {
 		return errors.Wrap(err, "Update request fail")
@@ -425,6 +449,7 @@ func (repo *variableRepository) UpdateWithNames(ctx context.Context, tgID int64,
 }
 
 func (repo *variableRepository) Delete(ctx context.Context, tgID int64, name string) error {
+	db := getConnection(ctx, repo.sql)
 
 	query := `UPDATE variables
 		SET value = NULL
@@ -438,7 +463,7 @@ func (repo *variableRepository) Delete(ctx context.Context, tgID int64, name str
 			WHERE users.tg_id = $1 AND variables.name = $2
 		) RETURNING id;`
 
-	res := repo.db.MustExec(query, tgID, name)
+	res := db.MustExec(query, tgID, name)
 	am, err := res.RowsAffected()
 	if err != nil {
 		return errors.Wrap(err, "Delete [Update] request fail")
@@ -450,6 +475,7 @@ func (repo *variableRepository) Delete(ctx context.Context, tgID int64, name str
 }
 
 func (repo *variableRepository) DeleteWithNames(ctx context.Context, tgID int64, names []string) error {
+	db := getConnection(ctx, repo.sql)
 
 	query := `UPDATE variables
 		SET value = NULL
@@ -469,9 +495,9 @@ func (repo *variableRepository) DeleteWithNames(ctx context.Context, tgID int64,
 	}
 
 	// sqlx.In returns queries with the `?` bindvar, we can rebind it for our backend
-	query = repo.db.Rebind(query)
+	query = db.Rebind(query)
 
-	res := repo.db.MustExec(query, args...)
+	res := db.MustExec(query, args...)
 	am, err := res.RowsAffected()
 	if err != nil {
 		return errors.Wrap(err, "Delete [Update] request fail")
@@ -483,6 +509,7 @@ func (repo *variableRepository) DeleteWithNames(ctx context.Context, tgID int64,
 }
 
 func (repo *variableRepository) DeleteAll(ctx context.Context, tgID int64) error {
+	db := getConnection(ctx, repo.sql)
 
 	query := `UPDATE variables
 		SET value = NULL
@@ -495,7 +522,7 @@ func (repo *variableRepository) DeleteAll(ctx context.Context, tgID int64) error
 			WHERE users.tg_id = $1
 		);`
 
-	res := repo.db.MustExec(query, tgID)
+	res := db.MustExec(query, tgID)
 	am, err := res.RowsAffected()
 	if err != nil {
 		return errors.Wrap(err, "Update request fail")

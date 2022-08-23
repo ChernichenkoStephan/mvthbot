@@ -5,36 +5,32 @@ import (
 
 	"emperror.dev/errors"
 	"github.com/ChernichenkoStephan/mvthbot/internal/app"
-	"github.com/ChernichenkoStephan/mvthbot/internal/user"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
 
 	app.Run(func(ctx context.Context, lg *zap.SugaredLogger) error {
 		lg.Infoln("Starting...")
-		// g, ctx := errgroup.WithContext(ctx)
+		g, ctx := errgroup.WithContext(ctx)
 
-		app, err := InitApp(lg)
+		app, err := InitApp(ctx, lg)
 		if err != nil {
 			return errors.Wrap(err, "App init failed")
 		}
 
-		return user.DummyRun(app.db, user.DUMMY_USER_RUN)
+		// Run Bot
+		g.Go(func() error {
+			return runBot(ctx, app)
+		})
 
-		/*
-				// Run API
-				g.Go(func() error {
-					return runAPI(app)
-				})
+		// Run API and DB
+		g.Go(func() error {
+			return runApp(ctx, app)
+		})
 
-				// Run Bot
-				g.Go(func() error {
-					return runBot(app)
-				})
-
-			return g.Wait()
-		*/
+		return g.Wait()
 	})
 
 }

@@ -10,7 +10,7 @@ import (
 	tg "github.com/ChernichenkoStephan/mvthbot/internal/bot"
 )
 
-func setupBot(app *App, lg *zap.SugaredLogger) error {
+func setupBot(ctx context.Context, app *App, lg *zap.SugaredLogger) error {
 	lg.Infoln("Bot setup")
 
 	b := app.bot.Client()
@@ -20,14 +20,14 @@ func setupBot(app *App, lg *zap.SugaredLogger) error {
 	b.Use(tg.ArgParse)
 
 	b.Handle(tele.OnText, func(c tele.Context) error {
-		return app.bot.HandleDefault(context.TODO(), c)
+		return app.bot.HandleDefault(ctx, c)
 	})
 
 	commands := make([]tele.Command, 0)
 	for _, cmd := range *app.bot.BaseCommands() {
 		lg.Infof("Setting '%s' command", cmd.Meta.Text)
 
-		b.Handle(cmd.Meta.Text, tg.NewTeleHandler(cmd.Handler))
+		b.Handle(cmd.Meta.Text, tg.NewTeleHandler(ctx, cmd.Handler))
 
 		if !cmd.IsParameterized {
 			commands = append(commands, cmd.Meta)
@@ -44,7 +44,7 @@ func setupBot(app *App, lg *zap.SugaredLogger) error {
 
 }
 
-func runBot(app *App) error {
+func runBot(ctx context.Context, app *App) error {
 	panicked := true
 	var err error
 	defer func() {

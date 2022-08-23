@@ -20,8 +20,8 @@ const (
 )
 
 const (
-	shutdownTimeout = time.Second * 1
-	watchdogTimeout = shutdownTimeout + time.Second*1
+	shutdownTimeout = time.Second * 5
+	watchdogTimeout = shutdownTimeout + time.Second*5
 )
 
 const EnvLogLevel = "LOG_LEVEL"

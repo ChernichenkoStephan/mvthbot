@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -16,7 +17,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 )
 
-func setupAPI(app *App) error {
+func setupAPI(ctx context.Context, app *App) error {
 	app.lg.Infoln("Api setup")
 
 	app.api.Use(cors.New())
@@ -40,6 +41,12 @@ func setupAPI(app *App) error {
 	app.api.Use(func(c *fiber.Ctx) error {
 
 		lg.Infof("[%s]:%s | %s | %s", c.IP(), c.Port(), c.Method(), c.Path())
+		return c.Next()
+	})
+
+	// Setting global context
+	app.api.Use(func(c *fiber.Ctx) error {
+		c.SetUserContext(ctx)
 		return c.Next()
 	})
 
@@ -73,8 +80,4 @@ func setupAPI(app *App) error {
 
 	app.lg.Infoln("Api setup success")
 	return nil
-}
-
-func runAPI(app *App) error {
-	return app.api.Listen(":8080")
 }

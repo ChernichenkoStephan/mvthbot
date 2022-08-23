@@ -1,5 +1,7 @@
 # mvthbot
 
+> WORK IN PROCESS...
+
 <img src="assets/robot.jpeg" alt="mvthbot header picture" width="200"/>
 
 A service-bot with users, variables, and calculation history support to solve equations in text format, to help with calculations in chats. With an open API for interacting with other services and registering via telegram.
@@ -20,24 +22,16 @@ A service-bot with users, variables, and calculation history support to solve eq
         - [x] Commands set
     - [x] error handling (using emperror.dev/emperror)
     - [x] logging (using uber.org/zap)
-    - [ ] Database
-        - [ ] PostgreSQL (using github.com/jackc/pgx)
+    - [x] Database
+        - [x] PostgreSQL (using github.com/jackc/pgx)
         - [x] Migrations (using golang-migrate)
-    - [ ] configuration (using spf13/viper)
+    - [ ] Configuration (using spf13/viper)
     - [ ] Deploy (using Docker and Makefile)
 - [ ] mvthbot 1.0
-    - [ ] health checks (using AppsFlyer/go-sundheit)
-    - [ ] graceful restart (using cloudflare/tableflip) and shutdown
-    - [ ] metrics and tracing using Prometheus and Jaeger (via OpenCensus)
-    - [ ] support for multiple server/daemon instances (using oklog/run)
-- [ ] mvthbot 2.0 (rebuild to microservices)
-    - [ ] Services
-        - [ ] Solving
-        - [ ] User
-        - [ ] Bot
-        - [ ] Gateway (Nginx & REST & grpc)
-        - [ ] Auth
-    - [ ] messaging (using ThreeDotsLabs/watermill)
+    - [ ] Health checks (using AppsFlyer/go-sundheit)
+    - [ ] Graceful restart (using cloudflare/tableflip) and shutdown
+    - [ ] Metrics and tracing using Prometheus and Jaeger (via OpenCensus)
+    - [ ] Support for multiple server/daemon instances (using oklog/run)
     - [ ] Proper testing
         - [ ] Tests refactoring
         - [ ] Coverage increase
@@ -66,9 +60,9 @@ A service-bot with users, variables, and calculation history support to solve eq
 
 ## Prerequisites
 
-* Golang (version `unknown`)
+* Golang (version 1.18+)
 * Docker (version `unknown`)
-* PostgreSQL (version `unknown`)
+* PostgreSQL (version ~14.5)
 
 ## Installation
 

@@ -78,14 +78,13 @@ func UserCheck(db *user.Database) tele.MiddlewareFunc {
 	return func(next tele.HandlerFunc) tele.HandlerFunc {
 		return func(c tele.Context) error {
 			if c.Chat().Type != "channel" {
-				ctx := context.TODO()
-				ok, err := db.Exist(ctx, c.Message().Sender.ID)
+				ok, err := db.Exist(context.TODO(), c.Message().Sender.ID)
 				if err != nil {
 					return errors.Wrap(err, "User existence check failed")
 				}
 				if !ok {
 					u := user.NewUser(c.Message().Sender.ID)
-					db.Add(ctx, u.TelegramID, u.Password)
+					db.Add(context.TODO(), u.TelegramID, u.Password)
 				}
 			}
 			return next(c)

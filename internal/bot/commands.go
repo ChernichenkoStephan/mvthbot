@@ -10,9 +10,9 @@ import (
 	tele "gopkg.in/telebot.v3"
 )
 
-func NewTeleHandler(f HandleFunc) tele.HandlerFunc {
+func NewTeleHandler(ctx context.Context, f HandleFunc) tele.HandlerFunc {
 	return func(c tele.Context) error {
-		err := f(context.TODO(), c)
+		err := f(ctx, c)
 		return err
 	}
 }
@@ -23,7 +23,6 @@ func (b *Bot) HandleDefault(ctx context.Context, c tele.Context) error {
 	// To work with empty (example: 2+2) statements only in bot
 	if c.Chat().Type == "private" {
 
-		ctx := context.TODO()
 		resp, procErr := b.process(ctx, dest.ID, c.Get("statements"))
 		if procErr != nil {
 			resp = fmt.Sprintf("Wrong input.\n%s", procErr.Error())
@@ -50,7 +49,6 @@ func (b *Bot) HandleGreatings(ctx context.Context, c tele.Context) error {
 // s command
 func (b *Bot) HandleSolve(ctx context.Context, c tele.Context) error {
 
-	ctx = context.TODO()
 	resp, procErr := b.process(ctx, c.Sender().ID, c.Get("statements"))
 	if procErr != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", procErr.Error())
@@ -69,7 +67,6 @@ func (b *Bot) HandleSolve(ctx context.Context, c tele.Context) error {
 func (b *Bot) HandleGetVariables(ctx context.Context, c tele.Context) error {
 	var resp string
 
-	ctx = context.TODO()
 	vs, servError := b.db.GetVariablesWithNames(ctx, c.Sender().ID, c.Args())
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
@@ -96,7 +93,6 @@ func (b *Bot) HandleGetVariables(ctx context.Context, c tele.Context) error {
 func (b *Bot) HandleGetAllVariables(ctx context.Context, c tele.Context) error {
 	var resp string
 
-	ctx = context.TODO()
 	vs, servError := b.db.GetAllVariables(ctx, c.Sender().ID)
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
@@ -123,7 +119,6 @@ func (b *Bot) HandleGetAllVariables(ctx context.Context, c tele.Context) error {
 func (b *Bot) HandleDeleteVariables(ctx context.Context, c tele.Context) error {
 	var resp string
 
-	ctx = context.TODO()
 	servError := b.db.DeleteVariablesWithNames(ctx, c.Sender().ID, c.Args())
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
@@ -144,7 +139,6 @@ func (b *Bot) HandleDeleteVariables(ctx context.Context, c tele.Context) error {
 func (b *Bot) HandleDeleteAllVariables(ctx context.Context, c tele.Context) error {
 	var resp string
 
-	ctx = context.TODO()
 	servError := b.db.DeleteAllVariables(ctx, c.Sender().ID)
 
 	if servError != nil {
@@ -165,7 +159,6 @@ func (b *Bot) HandleDeleteAllVariables(ctx context.Context, c tele.Context) erro
 func (b *Bot) HandleGetHistory(ctx context.Context, c tele.Context) error {
 	var resp string
 
-	ctx = context.TODO()
 	sts, servError := b.db.GetHistory(ctx, c.Sender().ID)
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
@@ -192,7 +185,6 @@ func (b *Bot) HandleGetHistory(ctx context.Context, c tele.Context) error {
 func (b *Bot) HandleClearAll(ctx context.Context, c tele.Context) error {
 	var resp string
 
-	ctx = context.TODO()
 	servError := b.db.Clear(ctx, c.Sender().ID)
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
@@ -215,7 +207,6 @@ func (b *Bot) HandleGetPassword(ctx context.Context, c tele.Context) error {
 
 	if c.Chat().Type == "private" {
 
-		ctx = context.TODO()
 		u, servError := b.db.Get(ctx, c.Sender().ID)
 		if servError != nil {
 			resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
@@ -243,7 +234,6 @@ func (b *Bot) HandleGeneratePassword(ctx context.Context, c tele.Context) error 
 
 	if c.Chat().Type == "private" {
 
-		ctx = context.TODO()
 		u, servError := b.db.Get(ctx, c.Sender().ID)
 		if servError != nil {
 			resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())

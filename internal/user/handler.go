@@ -36,6 +36,7 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	n := c.Params("name")
 	e := c.Params("equation")
+	ctx := c.UserContext()
 
 	decoded := utils.DecodeLF(e)
 
@@ -47,41 +48,40 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 		return errors.Wrap(err, "Convertion to RPN fail")
 	}
 
-	vs, err := h.db.GetAllVariables(context.TODO(), uID)
+	var res float64
+	err = h.db.WithinTransaction(ctx, func(ctx context.Context) error {
+		vs, err := h.db.GetAllVariables(ctx, uID)
+		if err != nil {
+			return errors.Wrap(err, "Get variables fail")
+		}
+
+		res, err = solving.Solve(eq, vs)
+		if err != nil {
+			return errors.Wrap(err, "Solving fail")
+		}
+
+		if err != nil {
+			return errors.Wrap(err, "Variables saving fail")
+		}
+
+		st := &solving.Statement{
+			Variables: []string{n},
+			Equation:  decoded,
+			Value:     res,
+		}
+
+		err = h.db.AddStatement(ctx, uID, st)
+		if err != nil {
+			return errors.Wrap(err, "Statement saving fail")
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
-		return errors.Wrap(err, "Get variables fail")
-	}
-
-	res, err := solving.Solve(eq, vs)
-	if err != nil {
-		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": err.Error(),
-		})
-		return errors.Wrap(err, "Solving fail")
-	}
-
-	if err != nil {
-		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": err.Error(),
-		})
-		return errors.Wrap(err, "Variables saving fail")
-	}
-
-	st := &solving.Statement{
-		Variables: []string{n},
-		Equation:  decoded,
-		Value:     res,
-	}
-
-	err = h.db.AddStatement(context.TODO(), uID, st)
-	if err != nil {
-		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": err.Error(),
-		})
-		return errors.Wrap(err, "Statement saving fail")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -91,6 +91,7 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 
 func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
+	ctx := c.UserContext()
 
 	type statement struct {
 		Names    []string `json:"names"`
@@ -115,56 +116,52 @@ func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 		return errors.Wrap(err, "Parsing fail")
 	}
 
-	vs, err := h.db.GetAllVariables(context.TODO(), uID)
+	vals := make([]float64, 0)
+	err := h.db.WithinTransaction(ctx, func(ctx context.Context) error {
+
+		vs, err := h.db.GetAllVariables(ctx, uID)
+		if err != nil {
+			return errors.Wrap(err, "Getting variables fail")
+		}
+
+		for _, st := range req.Statements {
+			eq, err := converting.ToRPN(st.Equation)
+			if err != nil {
+				return errors.Wrap(err, "Converting to RPN fail")
+			}
+
+			res, err := solving.Solve(eq, vs)
+			if err != nil {
+				return errors.Wrap(err, "Solving fail")
+			}
+			vals = append(vals, res)
+
+			ost := &solving.Statement{
+				Variables: st.Names,
+				Equation:  st.Equation,
+				Value:     res,
+			}
+			err = h.db.AddStatement(ctx, uID, ost)
+			if err != nil {
+				return errors.Wrap(err, "Statement saving fail")
+			}
+
+			if err != nil {
+				return errors.Wrap(err, "Names saving fail")
+			}
+
+			for _, n := range st.Names {
+				vs[n] = res
+			}
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
-		return errors.Wrap(err, "Getting variables fail")
-	}
-
-	vals := make([]float64, 0)
-	for _, st := range req.Statements {
-		eq, err := converting.ToRPN(st.Equation)
-		if err != nil {
-			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": err.Error(),
-			})
-			return errors.Wrap(err, "Converting to RPN fail")
-		}
-
-		res, err := solving.Solve(eq, vs)
-		if err != nil {
-			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": err.Error(),
-			})
-			return errors.Wrap(err, "Solving fail")
-		}
-		vals = append(vals, res)
-
-		ost := &solving.Statement{
-			Variables: st.Names,
-			Equation:  st.Equation,
-			Value:     res,
-		}
-		err = h.db.AddStatement(context.TODO(), uID, ost)
-		if err != nil {
-			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": err.Error(),
-			})
-			return errors.Wrap(err, "Statement saving fail")
-		}
-
-		if err != nil {
-			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message": err.Error(),
-			})
-			return errors.Wrap(err, "Names saving fail")
-		}
-
-		for _, n := range st.Names {
-			vs[n] = res
-		}
 	}
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -175,8 +172,9 @@ func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 func (h *variableHandler) GetVariable(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	n := c.Params("name")
+	ctx := c.UserContext()
 
-	v, err := h.db.GetVariable(context.TODO(), uID, n)
+	v, err := h.db.GetVariable(ctx, uID, n)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -191,6 +189,7 @@ func (h *variableHandler) GetVariable(c *fiber.Ctx) error {
 
 func (h *variableHandler) GetVariables(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
+	ctx := c.UserContext()
 
 	type variablesRequest struct {
 		Names []string `json:"names"`
@@ -210,7 +209,7 @@ func (h *variableHandler) GetVariables(c *fiber.Ctx) error {
 		return errors.Wrap(err, "Request parsing fail")
 	}
 
-	vars, err := h.db.GetVariablesWithNames(context.TODO(), uID, req.Names)
+	vars, err := h.db.GetVariablesWithNames(ctx, uID, req.Names)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -226,9 +225,10 @@ func (h *variableHandler) GetVariables(c *fiber.Ctx) error {
 func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	n := c.Params("name")
+	ctx := c.UserContext()
 
 	if n == "" {
-		err := h.db.DeleteAllVariables(context.TODO(), uID)
+		err := h.db.DeleteAllVariables(ctx, uID)
 		if err != nil {
 			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),
@@ -237,7 +237,7 @@ func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 		}
 	}
 
-	err := h.db.DeleteVariable(context.TODO(), uID, n)
+	err := h.db.DeleteVariable(ctx, uID, n)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -252,8 +252,9 @@ func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 
 func (h *variableHandler) DeleteAllVariables(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
+	ctx := c.UserContext()
 
-	if err := h.db.DeleteAllVariables(context.TODO(), uID); err != nil {
+	if err := h.db.DeleteAllVariables(ctx, uID); err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
@@ -286,8 +287,9 @@ func NewHistoryHandler(userRoute fiber.Router, db *Database) {
 
 func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
+	ctx := c.UserContext()
 
-	hist, err := h.db.GetHistory(context.TODO(), uID)
+	hist, err := h.db.GetHistory(ctx, uID)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -301,7 +303,9 @@ func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 
 func (h *historyHandler) DeleteHistory(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
-	if err := h.db.Clear(context.TODO(), uID); err != nil {
+	ctx := c.UserContext()
+
+	if err := h.db.Clear(ctx, uID); err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
