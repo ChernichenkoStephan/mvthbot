@@ -70,7 +70,7 @@ func (b *Bot) HandleGetVariables(ctx context.Context, c tele.Context) error {
 	var resp string
 
 	ctx = context.TODO()
-	vs, servError := b.variablesService.GetWithNames(ctx, c.Sender().ID, c.Args())
+	vs, servError := b.db.GetVariablesWithNames(ctx, c.Sender().ID, c.Args())
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
 	} else {
@@ -97,7 +97,7 @@ func (b *Bot) HandleGetAllVariables(ctx context.Context, c tele.Context) error {
 	var resp string
 
 	ctx = context.TODO()
-	vs, servError := b.variablesService.GetAll(ctx, c.Sender().ID)
+	vs, servError := b.db.GetAllVariables(ctx, c.Sender().ID)
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
 	} else {
@@ -124,7 +124,7 @@ func (b *Bot) HandleDeleteVariables(ctx context.Context, c tele.Context) error {
 	var resp string
 
 	ctx = context.TODO()
-	servError := b.variablesService.DeleteWithNames(ctx, c.Sender().ID, c.Args())
+	servError := b.db.DeleteVariablesWithNames(ctx, c.Sender().ID, c.Args())
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
 	} else {
@@ -145,7 +145,7 @@ func (b *Bot) HandleDeleteAllVariables(ctx context.Context, c tele.Context) erro
 	var resp string
 
 	ctx = context.TODO()
-	servError := b.variablesService.DeleteAll(ctx, c.Sender().ID)
+	servError := b.db.DeleteAllVariables(ctx, c.Sender().ID)
 
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
@@ -166,7 +166,7 @@ func (b *Bot) HandleGetHistory(ctx context.Context, c tele.Context) error {
 	var resp string
 
 	ctx = context.TODO()
-	sts, servError := b.userService.GetHistory(ctx, c.Sender().ID)
+	sts, servError := b.db.GetHistory(ctx, c.Sender().ID)
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
 	} else {
@@ -193,7 +193,7 @@ func (b *Bot) HandleClearAll(ctx context.Context, c tele.Context) error {
 	var resp string
 
 	ctx = context.TODO()
-	servError := b.userService.Clear(ctx, c.Sender().ID)
+	servError := b.db.Clear(ctx, c.Sender().ID)
 	if servError != nil {
 		resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
 	} else {
@@ -216,7 +216,7 @@ func (b *Bot) HandleGetPassword(ctx context.Context, c tele.Context) error {
 	if c.Chat().Type == "private" {
 
 		ctx = context.TODO()
-		u, servError := b.userService.Get(ctx, c.Sender().ID)
+		u, servError := b.db.Get(ctx, c.Sender().ID)
 		if servError != nil {
 			resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
 		} else if u.Password == "" {
@@ -244,7 +244,7 @@ func (b *Bot) HandleGeneratePassword(ctx context.Context, c tele.Context) error 
 	if c.Chat().Type == "private" {
 
 		ctx = context.TODO()
-		u, servError := b.userService.Get(ctx, c.Sender().ID)
+		u, servError := b.db.Get(ctx, c.Sender().ID)
 		if servError != nil {
 			resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
 		} else {

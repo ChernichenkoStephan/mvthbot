@@ -13,14 +13,12 @@ import (
 
 // Variables
 type variableHandler struct {
-	userService     UserService
-	variableService VariableService
+	db *Database
 }
 
-func NewVariableHandler(userRoute fiber.Router, us UserService, vs VariableService) {
+func NewVariableHandler(userRoute fiber.Router, db *Database) {
 	h := &variableHandler{
-		userService:     us,
-		variableService: vs,
+		db: db,
 	}
 
 	userRoute.Post("/:name/:equation", GetUserIDFromJWT, h.HandleVariable)
@@ -49,7 +47,7 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 		return errors.Wrap(err, "Convertion to RPN fail")
 	}
 
-	vs, err := h.variableService.GetAll(context.TODO(), uID)
+	vs, err := h.db.GetAllVariables(context.TODO(), uID)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -78,7 +76,7 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 		Value:     res,
 	}
 
-	err = h.userService.AddStatement(context.TODO(), uID, st)
+	err = h.db.AddStatement(context.TODO(), uID, st)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -117,7 +115,7 @@ func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 		return errors.Wrap(err, "Parsing fail")
 	}
 
-	vs, err := h.variableService.GetAll(context.TODO(), uID)
+	vs, err := h.db.GetAllVariables(context.TODO(), uID)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -149,7 +147,7 @@ func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 			Equation:  st.Equation,
 			Value:     res,
 		}
-		err = h.userService.AddStatement(context.TODO(), uID, ost)
+		err = h.db.AddStatement(context.TODO(), uID, ost)
 		if err != nil {
 			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),
@@ -178,7 +176,7 @@ func (h *variableHandler) GetVariable(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	n := c.Params("name")
 
-	v, err := h.variableService.Get(context.TODO(), uID, n)
+	v, err := h.db.GetVariable(context.TODO(), uID, n)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -212,7 +210,7 @@ func (h *variableHandler) GetVariables(c *fiber.Ctx) error {
 		return errors.Wrap(err, "Request parsing fail")
 	}
 
-	vars, err := h.variableService.GetWithNames(context.TODO(), uID, req.Names)
+	vars, err := h.db.GetVariablesWithNames(context.TODO(), uID, req.Names)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -230,7 +228,7 @@ func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 	n := c.Params("name")
 
 	if n == "" {
-		err := h.variableService.DeleteAll(context.TODO(), uID)
+		err := h.db.DeleteAllVariables(context.TODO(), uID)
 		if err != nil {
 			c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message": err.Error(),
@@ -239,7 +237,7 @@ func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 		}
 	}
 
-	err := h.variableService.Delete(context.TODO(), uID, n)
+	err := h.db.DeleteVariable(context.TODO(), uID, n)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -255,7 +253,7 @@ func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 func (h *variableHandler) DeleteAllVariables(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 
-	if err := h.variableService.DeleteAll(context.TODO(), uID); err != nil {
+	if err := h.db.DeleteAllVariables(context.TODO(), uID); err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})
@@ -274,12 +272,12 @@ func (h *variableHandler) DeleteAllVariables(c *fiber.Ctx) error {
 //
 
 type historyHandler struct {
-	userService UserService
+	db *Database
 }
 
-func NewHistoryHandler(userRoute fiber.Router, us UserService) {
+func NewHistoryHandler(userRoute fiber.Router, db *Database) {
 	h := &historyHandler{
-		userService: us,
+		db: db,
 	}
 
 	userRoute.Get("", GetUserIDFromJWT, h.HandleHistory)
@@ -289,7 +287,7 @@ func NewHistoryHandler(userRoute fiber.Router, us UserService) {
 func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 
-	hist, err := h.userService.GetHistory(context.TODO(), uID)
+	hist, err := h.db.GetHistory(context.TODO(), uID)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
@@ -303,7 +301,7 @@ func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 
 func (h *historyHandler) DeleteHistory(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
-	if err := h.userService.Clear(context.TODO(), uID); err != nil {
+	if err := h.db.Clear(context.TODO(), uID); err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"message": err.Error(),
 		})

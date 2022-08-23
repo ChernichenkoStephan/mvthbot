@@ -8,14 +8,22 @@ import (
 
 var once sync.Once
 
-var defaultCache *Cache
+var defaultCache *inMemoryCache
 
-func GetCache(defaultExpiration, cleanupInterval time.Duration) *Cache {
+type inMemoryCache struct {
+	defaultExpiration time.Duration
+	cleanupInterval   time.Duration
+
+	sync.RWMutex
+	items map[string]Item
+}
+
+func GetCache(defaultExpiration, cleanupInterval time.Duration) *inMemoryCache {
 
 	once.Do(func() {
 		data := make(map[string]Item)
 
-		defaultCache = &Cache{
+		defaultCache = &inMemoryCache{
 			items:             data,
 			defaultExpiration: defaultExpiration,
 			cleanupInterval:   cleanupInterval,
@@ -29,7 +37,7 @@ func GetCache(defaultExpiration, cleanupInterval time.Duration) *Cache {
 	return defaultCache
 }
 
-func (c *Cache) Set(key string, value interface{}, duration time.Duration) {
+func (c *inMemoryCache) Set(key string, value interface{}, duration time.Duration) {
 
 	var expiration int64
 
@@ -53,7 +61,7 @@ func (c *Cache) Set(key string, value interface{}, duration time.Duration) {
 
 }
 
-func (c *Cache) Get(key string) (interface{}, error) {
+func (c *inMemoryCache) Get(key string) (interface{}, error) {
 
 	c.RLock()
 
@@ -76,7 +84,7 @@ func (c *Cache) Get(key string) (interface{}, error) {
 	return item.Value, nil
 }
 
-func (c *Cache) Delete(key string) error {
+func (c *inMemoryCache) Delete(key string) error {
 
 	c.Lock()
 
@@ -91,7 +99,7 @@ func (c *Cache) Delete(key string) error {
 	return nil
 }
 
-func (c *Cache) Count() int {
+func (c *inMemoryCache) Count() int {
 
 	c.Lock()
 
@@ -102,7 +110,7 @@ func (c *Cache) Count() int {
 	return l
 }
 
-func (c *Cache) Rename(prewKey, newKey string) error {
+func (c *inMemoryCache) Rename(prewKey, newKey string) error {
 
 	c.Lock()
 
@@ -119,7 +127,7 @@ func (c *Cache) Rename(prewKey, newKey string) error {
 	return nil
 }
 
-func (c *Cache) Exist(key string) bool {
+func (c *inMemoryCache) Exist(key string) bool {
 	c.RLock()
 
 	defer c.RUnlock()
@@ -129,7 +137,7 @@ func (c *Cache) Exist(key string) bool {
 	return found
 }
 
-func (c *Cache) FlushAll() int {
+func (c *inMemoryCache) FlushAll() int {
 
 	c.Lock()
 
@@ -141,11 +149,11 @@ func (c *Cache) FlushAll() int {
 	return am
 }
 
-func (c *Cache) startGC() {
+func (c *inMemoryCache) startGC() {
 	go c.gc()
 }
 
-func (c *Cache) gc() {
+func (c *inMemoryCache) gc() {
 
 	for {
 		<-time.After(c.cleanupInterval)
@@ -163,7 +171,7 @@ func (c *Cache) gc() {
 
 }
 
-func (c *Cache) expiredKeys() (keys []string) {
+func (c *inMemoryCache) expiredKeys() (keys []string) {
 
 	c.RLock()
 
@@ -178,7 +186,7 @@ func (c *Cache) expiredKeys() (keys []string) {
 	return
 }
 
-func (c *Cache) clearItems(keys []string) {
+func (c *inMemoryCache) clearItems(keys []string) {
 
 	c.Lock()
 
@@ -187,4 +195,36 @@ func (c *Cache) clearItems(keys []string) {
 	for _, k := range keys {
 		delete(c.items, k)
 	}
+}
+
+type stabCache struct{}
+
+func GetDummyCache(defaultExpiration, cleanupInterval time.Duration) *stabCache {
+	return &stabCache{}
+}
+
+func (c *stabCache) Set(key string, value interface{}, duration time.Duration) {}
+
+func (c *stabCache) Get(key string) (interface{}, error) {
+	return nil, &ItemNotFoundError{}
+}
+
+func (c *stabCache) Delete(key string) error {
+	return nil
+}
+
+func (c *stabCache) Count() int {
+	return 0
+}
+
+func (c *stabCache) Rename(prewKey, newKey string) error {
+	return nil
+}
+
+func (c *stabCache) Exist(key string) bool {
+	return false
+}
+
+func (c *stabCache) FlushAll() int {
+	return 0
 }

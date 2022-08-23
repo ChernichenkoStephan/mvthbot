@@ -15,10 +15,7 @@ type Bot struct {
 	client *tele.Bot
 
 	// Working with users personal data
-	userService user.UserService
-
-	// Workiing with users variables
-	variablesService user.VariableService
+	db *user.Database
 
 	// Fixing mistakes in input
 	stringFixer fixing.Fixer

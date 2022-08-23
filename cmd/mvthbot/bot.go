@@ -16,7 +16,7 @@ func setupBot(app *App, lg *zap.SugaredLogger) error {
 	b := app.bot.Client()
 
 	b.Use(tg.Logging(lg))
-	b.Use(tg.UserCheck(app.userService))
+	b.Use(tg.UserCheck(app.db))
 	b.Use(tg.ArgParse)
 
 	b.Handle(tele.OnText, func(c tele.Context) error {

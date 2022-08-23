@@ -15,17 +15,15 @@ import (
 
 func NewBot(
 	client *tele.Bot,
-	userService user.UserService,
-	variablesService user.VariableService,
+	db *user.Database,
 	fixer fixing.Fixer,
 	lg *zap.SugaredLogger,
 ) *Bot {
 	return &Bot{
-		client:           client,
-		userService:      userService,
-		variablesService: variablesService,
-		stringFixer:      fixer,
-		logger:           lg,
+		client:      client,
+		db:          db,
+		stringFixer: fixer,
+		logger:      lg,
 	}
 }
 
@@ -39,7 +37,7 @@ func (b *Bot) GetUserID(username string) (int64, error) {
 
 func (b *Bot) Broadcast(message string) error {
 	ctx := context.TODO()
-	users, err := b.userService.GetAll(ctx)
+	users, err := b.db.GetAll(ctx)
 	if err != nil {
 		return err
 	}
@@ -61,7 +59,7 @@ func (b *Bot) process(ctx context.Context, uID int64, statements interface{}) (s
 
 	builder := NewOutputBuilder()
 
-	vs, err := b.variablesService.GetAll(context.TODO(), uID)
+	vs, err := b.db.GetAllVariables(context.TODO(), uID)
 	if err != nil {
 		msg := "DB get all variables failed"
 		return "", errors.Wrap(err, msg)
@@ -86,7 +84,7 @@ func (b *Bot) process(ctx context.Context, uID int64, statements interface{}) (s
 		builder.Write(&s)
 
 		c := context.TODO()
-		err = b.userService.AddStatement(c, uID, &s)
+		err = b.db.AddStatement(c, uID, &s)
 		if err != nil {
 			msg := "Statements add failed"
 			return "", errors.Wrap(err, msg)

@@ -24,11 +24,10 @@ type App struct {
 	// db
 
 	// cache
-	cache *user.Cache
+	cache user.Cache
 
 	// Services
-	userService     user.UserService
-	veriableService user.VariableService
+	db *user.Database
 
 	// Repositories
 	userRepository     user.UserRepository
@@ -48,17 +47,18 @@ func InitApp( /*metrics db*/ lg *zap.SugaredLogger) (*App, error) {
 	cache := user.GetCache(time.Hour, time.Hour)
 
 	// DB setup
-	db, err := setupDB(lg)
+	conn, err := setupDB(lg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error during DB setup")
 	}
 
-	ur := user.NewUserRepository(cache, db)
-	vr := user.NewVariableRepository(cache, db)
-	ar := auth.NewAuthRepository(cache, db)
+	ur := user.NewUserRepository(cache, conn)
+	vr := user.NewVariableRepository(cache, conn)
 
-	us := user.NewUserService(ur)
-	vs := user.NewVariableService(vr)
+	ar := auth.NewAuthRepository(cache, conn)
+
+	dblg := lg.Named("Database")
+	db := user.NewDB(ur, vr, cache, dblg)
 
 	// Creating logger for bot
 	//blg := lg.Named("BOT")
@@ -91,8 +91,7 @@ func InitApp( /*metrics db*/ lg *zap.SugaredLogger) (*App, error) {
 
 		lg: lg,
 
-		userService:     us,
-		veriableService: vs,
+		db: db,
 
 		userRepository:     ur,
 		variableRepository: vr,

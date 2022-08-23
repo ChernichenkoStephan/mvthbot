@@ -2,14 +2,14 @@ package user
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 
 	"emperror.dev/errors"
 	solv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
 )
+
+var itemNotFoundErr *ItemNotFoundError = &ItemNotFoundError{}
 
 // Get variables
 type dbVariable struct {
@@ -31,30 +31,12 @@ type dbStatement struct {
 	Created  string  `db:"created_at"`
 }
 
-func getUserFromCache(cache *Cache, uID int64) (*User, error) {
-	it, err := cache.Get(fmt.Sprintf("%v", uID))
-	if err != nil {
-		return nil, err
-	}
-
-	u, ok := it.(*User)
-	if !ok {
-		return nil, errors.New("Wrong type")
-	}
-	return u, nil
-}
-
-func addUserToCache(cache *Cache, user *User) error {
-	cache.Set(fmt.Sprintf("%v", user.Id), user, time.Hour)
-	return nil
-}
-
 type userRepository struct {
-	cache *Cache
+	cache Cache
 	db    *sqlx.DB
 }
 
-func NewUserRepository(c *Cache, db *sqlx.DB) *userRepository {
+func NewUserRepository(c Cache, db *sqlx.DB) *userRepository {
 	return &userRepository{
 		cache: c,
 		db:    db,
@@ -137,6 +119,7 @@ func (repo userRepository) getFilledUser(ctx context.Context, user *dbUser) (*Us
 }
 
 func (repo userRepository) Add(ctx context.Context, tgID int64, password string) error {
+
 	query := `INSERT INTO users (tg_id, password, created_at)
 		VALUES ($1, $2, now());`
 
@@ -162,7 +145,6 @@ func (repo userRepository) GetAll(ctx context.Context) (*[]User, error) {
 		}
 		users[i] = *u
 	}
-
 	return &users, nil
 }
 
@@ -176,7 +158,12 @@ func (repo *userRepository) Get(ctx context.Context, tgID int64) (*User, error) 
 		return nil, errors.Wrap(err, "Get request fail")
 	}
 
-	return repo.getFilledUser(context.TODO(), &dbu)
+	u, err := repo.getFilledUser(context.TODO(), &dbu)
+	if err != nil {
+		return nil, errors.Wrap(err, `User additional requests fail`)
+	}
+
+	return u, nil
 }
 
 func (repo *userRepository) Update(ctx context.Context, tgID int64, password string) error {
@@ -191,7 +178,6 @@ func (repo *userRepository) Update(ctx context.Context, tgID int64, password str
 }
 
 func (repo *userRepository) Delete(ctx context.Context, tgID int64) error {
-
 	tx := repo.db.MustBegin()
 
 	query := `DELETE FROM "variables" 
@@ -225,7 +211,6 @@ func (repo *userRepository) Delete(ctx context.Context, tgID int64) error {
 }
 
 func (repo *userRepository) GetHistory(ctx context.Context, tgID int64) (*History, error) {
-
 	h, _, err := repo.getHistoryWithTgID(ctx, tgID)
 	if err != nil {
 		return nil, errors.Wrap(err, "Get history from DB fail.")
@@ -246,27 +231,12 @@ func (repo *userRepository) AddStatement(ctx context.Context, tgID int64, statem
 		return errors.Wrap(err, "Add statement request to db fail")
 	}
 
-	//    UNION SELECT * FROM set_var(11111, 7, 'd', 8.0);
-
 	query = `select * from set_var($1, $2, $3, $4);`
 	for _, varName := range statement.Variables {
 		tx.MustExec(query, tgID, newStID, varName, statement.Value)
 	}
 
 	tx.Commit()
-
-	return nil
-}
-
-func (repo *userRepository) AddStatements(ctx context.Context, tgID int64, statement *[]solv.Statement) error {
-
-	ctx = context.TODO()
-	for _, s := range *statement {
-		err := repo.AddStatement(ctx, tgID, &s)
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
@@ -315,11 +285,11 @@ func (repo *userRepository) Clear(ctx context.Context, tgID int64) error {
 //
 
 type variableRepository struct {
-	cache *Cache
+	cache Cache
 	db    *sqlx.DB
 }
 
-func NewVariableRepository(c *Cache, db *sqlx.DB) *variableRepository {
+func NewVariableRepository(c Cache, db *sqlx.DB) *variableRepository {
 	return &variableRepository{
 		cache: c,
 		db:    db,

@@ -52,12 +52,11 @@ func setupAPI(app *App) error {
 	auth.NewAuthHandler(app.api.Group("/api/v1/auth"), app.authRepository, app.bot, lg)
 	user.NewVariableHandler(
 		app.api.Group("/api/v1/variables", auth.JWTMiddleware()),
-		app.userService,
-		app.veriableService,
+		app.db,
 	)
 	user.NewHistoryHandler(
 		app.api.Group("/api/v1/history", auth.JWTMiddleware()),
-		app.userService,
+		app.db,
 	)
 
 	// Prepare an endpoint for 'Not Found'.

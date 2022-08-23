@@ -2,10 +2,10 @@ package user
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	solv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
+	"go.uber.org/zap"
 )
 
 type VMap map[string]float64
@@ -30,28 +30,13 @@ type User struct {
 	Variables VMap
 }
 
-//
-//
-//
-//
-//
-type UserService interface {
-	Add(ctx context.Context, tgID int64, password string) error
+type Database struct {
+	usersRepo UserRepository
+	varsRepo  VariableRepository
 
-	Get(ctx context.Context, tgID int64) (*User, error)
-	GetAll(ctx context.Context) (*[]User, error)
+	cache Cache
 
-	Update(ctx context.Context, tgID int64, password string) error
-
-	Delete(ctx context.Context, tgID int64) error
-
-	AddStatement(ctx context.Context, tgID int64, statement *solv.Statement) error
-	AddStatements(ctx context.Context, tgID int64, statement *[]solv.Statement) error
-
-	GetHistory(ctx context.Context, tgID int64) (*History, error)
-
-	Exist(ctx context.Context, tgID int64) (bool, error)
-	Clear(ctx context.Context, tgID int64) error
+	lg *zap.SugaredLogger
 }
 
 //
@@ -70,30 +55,11 @@ type UserRepository interface {
 	Delete(ctx context.Context, tgID int64) error
 
 	AddStatement(ctx context.Context, tgID int64, statement *solv.Statement) error
-	AddStatements(ctx context.Context, tgID int64, statement *[]solv.Statement) error
 
 	GetHistory(ctx context.Context, tgID int64) (*History, error)
 
 	Exist(ctx context.Context, tgID int64) (bool, error)
 	Clear(ctx context.Context, tgID int64) error
-}
-
-//
-//
-//
-//
-//
-type VariableService interface {
-	Get(ctx context.Context, tgID int64, name string) (float64, error)
-	GetWithNames(ctx context.Context, tgID int64, names []string) (VMap, error)
-	GetAll(ctx context.Context, tgID int64) (VMap, error)
-
-	Update(ctx context.Context, tgID int64, name string, value float64) error
-	UpdateWithNames(ctx context.Context, tgID int64, names []string, value float64) error
-
-	Delete(ctx context.Context, tgID int64, name string) error
-	DeleteWithNames(ctx context.Context, tgID int64, names []string) error
-	DeleteAll(ctx context.Context, tgID int64) error
 }
 
 //
@@ -120,20 +86,20 @@ type VariableRepository interface {
 //
 //
 
+type Cache interface {
+	Set(key string, value interface{}, duration time.Duration)
+	Get(key string) (interface{}, error)
+	Delete(key string) error
+	Count() int
+	Rename(prewKey, newKey string) error
+	Exist(key string) bool
+	FlushAll() int
+}
+
 type Item struct {
 	Value      interface{}
 	Created    time.Time
 	Expiration int64
-}
-
-type Cache struct {
-	sync.RWMutex
-	defaultExpiration time.Duration
-	cleanupInterval   time.Duration
-	items             map[string]Item
-
-	vr VariableRepository
-	ur UserRepository
 }
 
 type ItemNotFoundError struct{}

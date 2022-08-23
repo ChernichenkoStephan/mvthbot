@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
 
 	"emperror.dev/errors"
 	"github.com/ChernichenkoStephan/mvthbot/internal/user"
@@ -10,27 +9,33 @@ import (
 )
 
 type authRepository struct {
-	cache *user.Cache
+	cache user.Cache
 	db    *sqlx.DB
 }
 
-func NewAuthRepository(c *user.Cache, db *sqlx.DB) *authRepository {
+func NewAuthRepository(cache user.Cache, db *sqlx.DB) *authRepository {
 	return &authRepository{
-		cache: c,
+		cache: cache,
 		db:    db,
 	}
 }
 
-func (repo *authRepository) GetPassword(ctx context.Context, id int64) (string, error) {
-	it, err := repo.cache.Get(fmt.Sprintf("%v", id))
-	if !errors.As(err, &user.ItemNotFoundError{}) {
-		return "", errors.Wrap(err, fmt.Sprintf("Getting user with id %d fail", id))
-	} else if err == nil {
-		u, ok := it.(*user.User)
-		if !ok {
-			return "", errors.New("Wrong type")
-		}
-		return u.Password, nil
+type dbUser struct {
+	Id       int    `db:"id"`
+	TgID     int64  `db:"tg_id"`
+	Password string `db:"password"`
+	Created  string `db:"created_at"`
+}
+
+func (repo *authRepository) GetPassword(ctx context.Context, tgID int64) (string, error) {
+
+	query := `SELECT * FROM "users" WHERE "users".tg_id = $1;`
+
+	u := dbUser{}
+	err := repo.db.Get(&u, query, tgID)
+	if err != nil {
+		return "", errors.Wrap(err, "Get request fail")
 	}
-	return "", nil
+
+	return u.Password, nil
 }

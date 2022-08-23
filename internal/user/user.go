@@ -26,12 +26,24 @@ func (u User) String() string {
 		u.Id, u.TelegramID, u.History, u.Variables)
 }
 
-func NewUser(id int64) *User {
+func NewUser(tgID int64) *User {
 	h := make(History, 0)
 	vs := make(map[string]float64)
 
 	return &User{
-		TelegramID: id,
+		TelegramID: tgID,
+		History:    &h,
+		Variables:  vs,
+	}
+}
+
+func NewUserWithPassword(tgID int64, password string) *User {
+	h := make(History, 0)
+	vs := make(map[string]float64)
+
+	return &User{
+		TelegramID: tgID,
+		Password:   password,
 		History:    &h,
 		Variables:  vs,
 	}
