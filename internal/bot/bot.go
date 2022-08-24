@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"runtime"
 
 	"emperror.dev/errors"
 	"github.com/ChernichenkoStephan/mvthbot/internal/converting"
@@ -10,6 +11,7 @@ import (
 	slv "github.com/ChernichenkoStephan/mvthbot/internal/solving"
 	"github.com/ChernichenkoStephan/mvthbot/internal/user"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -18,12 +20,14 @@ func NewBot(
 	db *user.Database,
 	fixer fixing.Fixer,
 	lg *zap.SugaredLogger,
+	config *BotConfig,
 ) *Bot {
 	return &Bot{
 		client:      client,
 		db:          db,
 		stringFixer: fixer,
 		logger:      lg,
+		conf:        config,
 	}
 }
 
@@ -32,7 +36,11 @@ func (b Bot) Client() *tele.Bot {
 }
 
 func (b *Bot) GetUserID(username string) (int64, error) {
-	return 11111, nil
+	c, err := b.client.ChatByUsername(username)
+	if err != nil {
+		return 0, errors.Wrap(err, `chat fetch failed`)
+	}
+	return c.ID, nil
 }
 
 func (b *Bot) Broadcast(ctx context.Context, message string) error {
@@ -41,13 +49,39 @@ func (b *Bot) Broadcast(ctx context.Context, message string) error {
 		return err
 	}
 
-	for i := 0; i < len(*users); i++ {
-		go func(u *user.User) {
-			b.client.Send(u, message)
-		}(&(*users)[i])
+	_, err = b.client.Send((*users)[0], message)
+	if err != nil {
+		return errors.Wrap(err, `Brodcasting failed`)
 	}
 
-	return nil
+	group, _ := errgroup.WithContext(ctx)
+
+	if len(*users) > 1 {
+		targets := (*users)[1:]
+		batchamm := runtime.NumCPU()
+		batchlen := len(targets) / batchamm
+
+		for i := 0; i < len(*users); i += batchlen {
+			start := i
+			end := batchlen
+			batch := (*users)[start:end]
+			group.Go(func() error {
+				for j := start; j < end; j++ {
+					_, err := b.client.Send(batch[j], message)
+					if err != nil {
+						b.logger.Errorf("Brodcast send error. To user %v, with error: %s", batch[j].TelegramID, err.Error())
+					}
+					if i == 0 {
+						return errors.Wrap(err, `Brodcasting failed`)
+					}
+				}
+				return nil
+			})
+		}
+
+	}
+
+	return group.Wait()
 }
 
 func (b *Bot) process(ctx context.Context, uID int64, statements interface{}) (string, error) {

@@ -39,7 +39,7 @@ func (b *Bot) HandleDefault(ctx context.Context, c tele.Context) error {
 
 // start command
 func (b *Bot) HandleGreatings(ctx context.Context, c tele.Context) error {
-	err := c.Send("Hi, let's go!")
+	err := c.Send(b.conf.GreetText)
 	if err != nil {
 		return errors.Wrap(err, "Reply failed")
 	}
@@ -238,8 +238,7 @@ func (b *Bot) HandleGeneratePassword(ctx context.Context, c tele.Context) error 
 		if servError != nil {
 			resp = fmt.Sprintf("Wrong input.\n%s", servError.Error())
 		} else {
-			// TODO fix to config
-			u.Password = utils.GenPassword(8)
+			u.Password = utils.GenPassword(b.conf.PasswordLength)
 			resp = fmt.Sprintf("%v", u.Password)
 		}
 

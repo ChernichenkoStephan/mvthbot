@@ -1,0 +1,27 @@
+---
+App:
+  name: "appName"
+  shutdown-timeout: 7
+  watchdog-timeout: 7
+Log:
+  # file-dir: "file-dir"
+  # error-file-name: "error-file-name"
+  # warn-file-name: "warn-file-name"
+  # info-file-name: "info-file-name"
+  # debug-file-name: "debug-file-name"
+  # max-size: 7
+  # max-backups: 7
+  # max-age: 7
+Bot:
+  password-length: 7
+  greetings-text: "Hi, wellcome to mvthbot"
+Api:
+  # port: "port"
+  max-connections: 100
+  # server-header: "server-header"
+  # body-limit: 7
+  read-timeout: 50
+  write-timeout: 50
+Database:
+  driver: "postgres"
+  source-str: "user=admin dbname=mvthdb sslmode=disable"

@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"emperror.dev/errors"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/ChernichenkoStephan/mvthbot/internal/auth"
 	tg "github.com/ChernichenkoStephan/mvthbot/internal/bot"
@@ -41,19 +43,21 @@ type App struct {
 	authRepository     auth.AuthRepository
 }
 
-func InitApp(ctx context.Context /*metrics, */, lg *zap.SugaredLogger) (*App, error) {
+func InitApp(ctx context.Context /*metrics, */, c *configuration, lg *zap.SugaredLogger) (*App, error) {
 	lg.Infoln("App setup")
 
 	api := fiber.New(fiber.Config{
-		AppName:      "Equation solving service",
-		ServerHeader: "Mvthbot API",
+		AppName:      c.App.Name,
+		ServerHeader: c.API.ServerHeader,
+		BodyLimit:    c.API.BodyLimit,
+		ReadTimeout:  c.API.ReadTimeout,
+		WriteTimeout: c.API.WriteTimeout,
 	})
 
-	// TODO change to normal
-	cache := user.GetDummyCache(time.Hour, time.Hour)
+	cache := user.GetCache(time.Hour, time.Hour)
 
 	// DB setup
-	conn, err := setupDB(lg)
+	conn, err := setupDB(c, lg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error during DB setup")
 	}
@@ -69,22 +73,25 @@ func InitApp(ctx context.Context /*metrics, */, lg *zap.SugaredLogger) (*App, er
 	// Creating logger for bot
 	blg := lg.Named("BOT")
 
-	// TODO Token from Viper
 	pref := tele.Settings{
-		Token:  "5597673919:AAGdW5TVuWkFkvCf87knskCPlg7HUoipSTY",
+		Token:  c.Bot.Token,
 		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
 		OnError: func(err error, c tele.Context) {
 			blg.Errorf("Got error in Telegram bot: %v", err)
 		},
 	}
 
-	c, err := tele.NewBot(pref)
+	tgc, err := tele.NewBot(pref)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error during Telegram bot setup")
 	}
 
 	f := fixing.New()
-	b := tg.NewBot(c, db, f, blg)
+
+	b := tg.NewBot(tgc, db, f, blg, &tg.BotConfig{
+		PasswordLength: c.Bot.PasswordLength,
+		GreetText:      c.Bot.Greetings,
+	})
 
 	app := &App{
 		api: api,
@@ -105,7 +112,7 @@ func InitApp(ctx context.Context /*metrics, */, lg *zap.SugaredLogger) (*App, er
 	}
 
 	// API setup
-	err = setupAPI(ctx, app)
+	err = setupAPI(ctx, c, app)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error during API setup")
 	}
@@ -120,9 +127,7 @@ func InitApp(ctx context.Context /*metrics, */, lg *zap.SugaredLogger) (*App, er
 	return app, nil
 }
 
-func (app *App) Close() error {
-	app.bot.Client().Stop()
-	app.lg.Info("Gracefull shutdown app")
+func (app *App) Close() {
 
 	dbErr := app.connection.Close()
 	if dbErr != nil {
@@ -131,20 +136,38 @@ func (app *App) Close() error {
 		app.lg.Info("DB connection closed.")
 	}
 
-	apiErr := app.api.Shutdown()
-	if dbErr != nil {
-		app.lg.Errorf("API connection closing fail %s", dbErr.Error())
-	} else {
-		app.lg.Info("API connection closed.p")
+	logErr := app.lg.Sync()
+	if logErr != nil {
+		fmt.Println(logErr)
 	}
 
-	return errors.Combine(dbErr, apiErr)
 }
 
-func runApp(ctx context.Context, app *App) error {
+func runApp(ctx context.Context, port string, app *App) error {
 	defer func(app *App) {
 		app.lg.Info("Gracefully shuting down the App")
 		app.Close()
 	}(app)
-	return app.api.Listen(":8080")
+
+	group, ctx := errgroup.WithContext(ctx)
+
+	group.Go(func() error {
+		return app.api.Listen(port)
+	})
+
+	group.Go(func() error {
+		<-ctx.Done()
+
+		app.lg.Info("Shuting down API server")
+		apiErr := app.api.Shutdown()
+		if apiErr != nil {
+			app.lg.Errorf("API connection closing fail %s", apiErr.Error())
+		} else {
+			app.lg.Info("API connection closed.")
+		}
+
+		return nil
+	})
+
+	return group.Wait()
 }

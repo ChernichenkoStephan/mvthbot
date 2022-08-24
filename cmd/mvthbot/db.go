@@ -6,13 +6,13 @@ import (
 	"go.uber.org/zap"
 )
 
-func setupDB(lg *zap.SugaredLogger) (*sqlx.DB, error) {
+func setupDB(c *configuration, lg *zap.SugaredLogger) (*sqlx.DB, error) {
 	lg.Infoln("DB setup")
 
 	// this Pings the database trying to connect
 	// use sqlx.Open() for sql.Open() semantics
-	// TODO change to Viper
-	db, err := sqlx.Connect("postgres", "user=admin dbname=mvthdb sslmode=disable")
+
+	db, err := sqlx.Connect(c.Database.Driver, c.Database.SourceStr)
 	if err != nil {
 		return nil, err
 	}

@@ -37,3 +37,6 @@ bin
 
 # Drawio system files
 ~$*
+
+# IDE's / source-code editors
+.vscode

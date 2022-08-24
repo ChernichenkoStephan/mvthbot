@@ -17,14 +17,14 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 )
 
-func setupAPI(ctx context.Context, app *App) error {
+func setupAPI(ctx context.Context, c *configuration, app *App) error {
 	app.lg.Infoln("Api setup")
 
 	app.api.Use(cors.New())
 	// api.Use(etag.New())
 	app.api.Use(favicon.New())
 	app.api.Use(limiter.New(limiter.Config{
-		Max: 100,
+		Max: c.API.MaxConnections,
 		LimitReached: func(c *fiber.Ctx) error {
 			c.Status(fiber.StatusTooManyRequests).JSON(&fiber.Map{
 				"status":  "fail",

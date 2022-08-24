@@ -103,14 +103,7 @@ func (l *Logger) loadCfg() {
 
 func (l *Logger) setSyncers() {
 	f := func(fN string) zapcore.WriteSyncer {
-		//return zapcore.AddSync(&lumberjack.Logger{
-		//    Filename:   logger.Opts.LogFileDir + sp + logger.Opts.AppName + "-" + fN,
-		//    MaxSize:    logger.Opts.MaxSize,
-		//    MaxBackups: logger.Opts.MaxBackups,
-		//    MaxAge:     logger.Opts.MaxAge,
-		//    Compress:   true,
-		//    LocalTime:  true,
-		//})
+
 		// One file per hour
 		logf, _ := rotatelogs.New(l.Opts.LogFileDir+sp+l.Opts.AppName+"-"+fN+".%Y_%m%d_%H",
 			rotatelogs.WithLinkName(l.Opts.LogFileDir+sp+l.Opts.AppName+"-"+fN),
@@ -123,12 +116,10 @@ func (l *Logger) setSyncers() {
 	warnWS = f(l.Opts.WarnFileName)
 	infoWS = f(l.Opts.InfoFileName)
 	debugWS = f(l.Opts.DebugFileName)
-	return
 }
 
 func (l *Logger) cores() zap.Option {
 	fileEncoder := zapcore.NewJSONEncoder(l.zapConfig.EncoderConfig)
-	//consoleEncoder := zapcore.NewConsoleEncoder(logger.zapConfig.EncoderConfig)
 	encoderConfig := zap.NewDevelopmentEncoderConfig()
 	encoderConfig.EncodeTime = timeEncoder
 	consoleEncoder := zapcore.NewConsoleEncoder(encoderConfig)

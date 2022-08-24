@@ -41,8 +41,13 @@ func Log(args ...float64) (float64, error) {
 }
 
 func Mod(args ...float64) (float64, error) {
-	// TODO
-	return 0.0, nil
+	if math.Round(args[0]) != args[0] {
+		return 0.0, fmt.Errorf(fmt.Sprintf("Number shuld be integer. error in: '%f'", args[0]))
+	}
+	if math.Round(args[1]) != args[1] {
+		return 0.0, fmt.Errorf(fmt.Sprintf("Number shuld be integer. error in: '%f'", args[1]))
+	}
+	return float64(int(args[0]) % int(args[1])), nil
 }
 
 func Exp(args ...float64) (float64, error) {

@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"time"
 
@@ -27,6 +27,7 @@ func NewAuthHandler(authRoute fiber.Router, repo AuthRepository, getter IDGetter
 }
 
 func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
+	ctx := c.UserContext()
 
 	type jwtClaims struct {
 		UserID string `json:"uid"`
@@ -57,7 +58,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 		}
 	}
 
-	pass, err := h.repository.GetPassword(context.TODO(), id)
+	pass, err := h.repository.GetPassword(ctx, id)
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"status":  "fail",
@@ -84,7 +85,7 @@ func (h *AuthHandler) signInUser(c *fiber.Ctx) error {
 		},
 	})
 
-	signedToken, err := token.SignedString([]byte(_TEST_SECRET))
+	signedToken, err := token.SignedString([]byte(os.Getenv("SECRET")))
 	if err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"status":  "fail",

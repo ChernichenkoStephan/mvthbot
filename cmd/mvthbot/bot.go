@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"errors"
 
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	tele "gopkg.in/telebot.v3"
 
 	tg "github.com/ChernichenkoStephan/mvthbot/internal/bot"
@@ -46,13 +46,29 @@ func setupBot(ctx context.Context, app *App, lg *zap.SugaredLogger) error {
 
 func runBot(ctx context.Context, app *App) error {
 	panicked := true
-	var err error
 	defer func() {
 		if panicked {
-			err = errors.New("Telegram bot runing error")
+			app.lg.Errorln("telegram bot runing error")
 		}
+		ctx.Done()
 	}()
-	app.bot.Client().Start()
+
+	group, ctx := errgroup.WithContext(ctx)
+
+	group.Go(func() error {
+		app.bot.Client().Start()
+		return nil
+	})
+
+	group.Go(func() error {
+		<-ctx.Done()
+
+		app.bot.Client().Stop()
+		app.lg.Info("Gracefull shutdown app")
+		return nil
+	})
+
 	panicked = false
-	return err
+
+	return group.Wait()
 }

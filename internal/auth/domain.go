@@ -24,7 +24,3 @@ type AuthHandler struct {
 	idGetter   IDGetter
 	logger     *zap.SugaredLogger
 }
-
-// TODO: Change secret to more secure
-
-var _TEST_SECRET string = `vwoejfnv;np29uwovnp2uiefvbjipb2jcnq`

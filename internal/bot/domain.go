@@ -9,6 +9,11 @@ import (
 	tele "gopkg.in/telebot.v3"
 )
 
+type BotConfig struct {
+	PasswordLength int
+	GreetText      string
+}
+
 type Bot struct {
 
 	// Telegram Bot API client
@@ -22,6 +27,8 @@ type Bot struct {
 
 	// log Logger
 	logger *zap.SugaredLogger
+
+	conf *BotConfig
 }
 
 type HandleFunc func(ctx context.Context, c tele.Context) error
