@@ -139,14 +139,30 @@ func (e ItemNotFoundError) Error() string {
 //
 //
 
+// swagger:model Statement
 type StatementDTO struct {
-	names    []string `validate:"required"`
-	equation string   `validate:"required"`
+	// Variables names in statement to set
+	// Example: a=b=2+2, names=["a","b"]
+	// Could be empty
+	// in: string[]
+	Names []string `json:"names"`
+	// Equation to solve
+	// Example: a=b=2+2, equation="2+2"
+	// in: string
+	Equation string `json:"equation"`
 }
 
-type VariablesPackDTO struct {
-	statements []StatementDTO `validate:"required"`
+// swagger:model Pack
+type PackDTO struct {
+	// Request for muliple solving
+	// in: Statement[]
+	Statements []StatementDTO `json:"statements"`
 }
+
+// type variable struct {
+// 	Name  string
+// 	Value float64
+// }
 
 //
 //

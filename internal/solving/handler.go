@@ -9,10 +9,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-type SolvePackDTO struct {
-	Equations []string `validate:"required"`
-}
-
 // Solve
 type solveHandler struct{}
 
@@ -24,6 +20,14 @@ func NewSolveHandler(userRoute fiber.Router) {
 	userRoute.Post("/:equation", h.HandleSolve)
 }
 
+// Solve godoc
+// @Summary      Basic equations solving
+// @Description  Solves equation given in url param
+// @Tags         solve,api
+// @Produce      json
+// @Param        equation path string true "equation for solve (2+2) encoded in LF"
+// @Success      200
+// @Router       /solve/{equation} [post]
 func (h *solveHandler) HandleSolve(c *fiber.Ctx) error {
 	decoded := utils.DecodeLF(c.Params("equation"))
 
@@ -48,8 +52,16 @@ func (h *solveHandler) HandleSolve(c *fiber.Ctx) error {
 	})
 }
 
+// MultiSolve godoc
+// @Summary      Multiple solving of equations
+// @Description  Solves equations array given in request body
+// @Tags         solve,api
+// @Accept       json
+// @Produce      json
+// @Success      200
+// @Router       /solve [post]
 func (h *solveHandler) HandleMultipleSolve(c *fiber.Ctx) error {
-	p := new(SolvePackDTO)
+	p := new(PackDTO)
 
 	if err := c.BodyParser(p); err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

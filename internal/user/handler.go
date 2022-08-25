@@ -32,6 +32,15 @@ func NewVariableHandler(userRoute fiber.Router, db *Database) {
 
 }
 
+// HandleVariable godoc
+// @Summary      Sets result of equation to variable
+// @Description  Sets result of equation given in path variable to variable
+// @Tags         user,solve,api
+// @Produce      json
+// @Param        name     path string true "variables name"
+// @Param        equation path string true "equation for solve (2+2) encoded in LF"
+// @Success      200
+// @Router       /{name}/{equation} [post]
 func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	n := c.Params("name")
@@ -89,25 +98,19 @@ func (h *variableHandler) HandleVariable(c *fiber.Ctx) error {
 	})
 }
 
+// HandleVariables godoc
+// @Summary      Processes multiple statements
+// @Description  Processes multiple statements given in body
+// @Tags         user,solve,api
+// @Accept       json
+// @Produce      json
+// @Success      200
+// @Router       / [post]
 func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	ctx := c.UserContext()
 
-	type statement struct {
-		Names    []string `json:"names"`
-		Equation string   `json:"equation"`
-	}
-
-	type setVariablesRequest struct {
-		Statements []statement `json:"statements"`
-	}
-
-	type variable struct {
-		Name  string
-		Value float64
-	}
-
-	req := &setVariablesRequest{}
+	req := &PackDTO{}
 
 	if err := c.BodyParser(req); err != nil {
 		c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -169,6 +172,14 @@ func (h *variableHandler) HandleVariables(c *fiber.Ctx) error {
 	})
 }
 
+// GetVariable godoc
+// @Summary      Returns users variable value
+// @Description  Returns users variable value (user from given JWT)
+// @Tags         user,api
+// @Produce      json
+// @Param        name     path string true "variables name"
+// @Success      200
+// @Router       /{name} [get]
 func (h *variableHandler) GetVariable(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	n := c.Params("name")
@@ -187,6 +198,14 @@ func (h *variableHandler) GetVariable(c *fiber.Ctx) error {
 	})
 }
 
+// GetVariables godoc
+// @Summary      Returns users variables value
+// @Description  Returns users variables (you can ask for specific in body) (user from given JWT)
+// @Tags         user,api
+// @Accept       json
+// @Produce      json
+// @Success      200
+// @Router       / [get]
 func (h *variableHandler) GetVariables(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	ctx := c.UserContext()
@@ -222,6 +241,15 @@ func (h *variableHandler) GetVariables(c *fiber.Ctx) error {
 	})
 }
 
+// GetVariable godoc
+// @Summary      Deletes users variable
+// @Description  Deletes users variable (user from given JWT)
+// @Tags         user,api
+// @Accept       json
+// @Produce      json
+// @Param        name     path string true "variables name"
+// @Success      200
+// @Router       /{name} [delete]
 func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	n := c.Params("name")
@@ -250,6 +278,14 @@ func (h *variableHandler) DeleteVariable(c *fiber.Ctx) error {
 	})
 }
 
+// DeleteAllVariables godoc
+// @Summary      Deletes users variables
+// @Description  Deletes users variables (you can ask for specific in body) (user from given JWT)
+// @Tags         user,api
+// @Accept       json
+// @Produce      json
+// @Success      200
+// @Router       / [delete]
 func (h *variableHandler) DeleteAllVariables(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	ctx := c.UserContext()
@@ -285,6 +321,13 @@ func NewHistoryHandler(userRoute fiber.Router, db *Database) {
 	userRoute.Delete("", GetUserIDFromJWT, h.DeleteHistory)
 }
 
+// HandleHistory godoc
+// @Summary      Returns history
+// @Description  Returns variables and statements hiistory for user defined by JWT
+// @Tags         user,api
+// @Produce      json
+// @Success      200
+// @Router       /history [get]
 func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	ctx := c.UserContext()
@@ -301,6 +344,13 @@ func (h *historyHandler) HandleHistory(c *fiber.Ctx) error {
 	})
 }
 
+// DeleteHistory godoc
+// @Summary      Deletes all users history
+// @Description  Clears variables and statements hiistory from user defined by JWT
+// @Tags         user,api
+// @Produce      json
+// @Success      200
+// @Router       /history [delete]
 func (h *historyHandler) DeleteHistory(c *fiber.Ctx) error {
 	uID := c.Locals("userID").(int64)
 	ctx := c.UserContext()

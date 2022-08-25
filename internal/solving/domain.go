@@ -18,13 +18,16 @@ type Statement struct {
 	Value float64
 }
 
-// Type from input
-type StatementDTO struct {
-	// variables to set
-	// example: a = b = 2 + 2 >> Variables = ["a", "b"]
-	Variables []string
+//
+//
+// DTO for views
+//
+//
 
-	// Equation to solve
-	// example: a = b = 2 + 2 >> Equation = "2 + 2"
-	Equation string
+// swagger:model Statement
+type PackDTO struct {
+	// Equations for solve
+	// Example: ["2+2", "3+3", "4+4"]
+	// in: string[]
+	Equations []string `validate:"required"`
 }

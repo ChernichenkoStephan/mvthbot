@@ -1,0 +1,1 @@
+/Users/adm/Go/bin/swag init -g cmd/mvthbot/main.go -o api/

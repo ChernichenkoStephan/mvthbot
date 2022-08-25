@@ -10,7 +10,12 @@ func NewMiscHandler(miscRoute fiber.Router) {
 	miscRoute.Get("/health", handler.healthCheck)
 }
 
-// Check for the health of the API.
+// HealthCheck godoc
+// @Summary      Health check
+// @Description  Check for the health of the API.
+// @Tags         api
+// @Success      200
+// @Router       /health [get]
 func (h *MiscHandler) healthCheck(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 		"status":  "success",

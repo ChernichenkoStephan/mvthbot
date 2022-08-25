@@ -105,6 +105,19 @@ func init() {
 	cobra.OnInitialize(viperSetup)
 }
 
+// @title Mvthbot API
+// @version 0.0.1
+// @description This is math solving API.
+
+// @contact.name API Support
+// @contact.url http://www.t.me/un000nu
+// @contact.email stephan@un000nu.pw
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host un000nu.mvth.pw
+// @BasePath /api/v1
 func main() {
 	Execute()
 }
