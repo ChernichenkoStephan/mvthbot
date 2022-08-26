@@ -53,6 +53,7 @@ services:
       WAIT_HOSTS: postgres:5432
       ENV BOT_TOKEN: ${BOT_TOKEN}
       ENV SECRET: ${SECRET}
+      DATA_SOURCE_NAME: ${DATA_SOURCE_NAME}
 
 networks:
       new:

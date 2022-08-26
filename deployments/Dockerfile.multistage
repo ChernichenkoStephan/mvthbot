@@ -24,6 +24,7 @@ RUN chmod +x /wait
 
 ENV BOT_TOKEN=${BOT_TOKEN}
 ENV SECRET=${SECRET}
+ENV DATA_SOURCE_NAME=${DATA_SOURCE_NAME}
 
 COPY --from=build service/bin/mvth /bin/mvth
 COPY --from=build service/configs/config.yaml /configs/config.yaml
