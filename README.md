@@ -30,8 +30,6 @@ A service-bot with users, variables, and calculation history support to solve eq
     - [x] Graceful shutdown (using sync/errgroup and context)
     - [x] Deploy (using Docker and Makefile)
 - [ ] mvthbot 1.0
-    - [ ] Health checks (using AppsFlyer/go-sundheit)
-    - [ ] Metrics and tracing using Prometheus and Jaeger (via OpenCensus)
     - [ ] Proper testing
         - [ ] Tests refactoring
         - [ ] Coverage increase
