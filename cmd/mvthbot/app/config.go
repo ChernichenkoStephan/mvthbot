@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -79,6 +80,8 @@ func (c *configuration) defaults() {
 	c.API.BodyLimit = 4 * 1024 * 1024
 	c.API.ReadTimeout = 1000
 	c.API.WriteTimeout = 1000
+
+	c.Database.SourceStr = os.Getenv("DATA_SOURCE_NAME")
 }
 
 func GetConfig() (*configuration, error) {
@@ -261,6 +264,12 @@ func GetConfig() (*configuration, error) {
 			log.Println("Wrong type for param: Database.source (shuld be string)")
 		}
 	}
+	if c.Bot.Token == `` {
+		return nil, errors.New("NEED TELEGRAM BOT TOKEN IN ENV VARS")
+	}
+	if os.Getenv("SECRET") == `` {
+		return nil, errors.New("NEED SECRET FOR PASSWORD GEN")
+	}
 
 	return c, nil
 }
@@ -278,6 +287,7 @@ func viperSetup() {
 		viper.SetConfigName("config")
 		viper.AddConfigPath(".")
 		viper.AddConfigPath("./configs/")
+		viper.AddConfigPath("../configs/")
 		viper.AddConfigPath(exPath)
 	}
 

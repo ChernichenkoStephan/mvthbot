@@ -1,6 +1,7 @@
 # mvthbot
 
-> WORK IN PROCESS...
+	WORK IN PROCESS...
+	Some info in readme could be outdated
 
 <img src="assets/robot.jpeg" alt="mvthbot header picture" width="200"/>
 
@@ -8,7 +9,7 @@ A service-bot with users, variables, and calculation history support to solve eq
 
 ## Roadmap
 
-- [ ] mvthbot MVP
+- [x] mvthbot MVP
     - [x] Equation solving
         - [x] Reverse Polish notation conversion
         - [x] Variables support
@@ -27,7 +28,7 @@ A service-bot with users, variables, and calculation history support to solve eq
         - [x] Migrations (using golang-migrate)
     - [x] Configuration (using env variables, spf13/viper and spf13/cobra)
     - [x] Graceful shutdown (using sync/errgroup and context)
-    - [ ] Deploy (using Docker and Makefile)
+    - [x] Deploy (using Docker and Makefile)
 - [ ] mvthbot 1.0
     - [ ] Health checks (using AppsFlyer/go-sundheit)
     - [ ] Metrics and tracing using Prometheus and Jaeger (via OpenCensus)
@@ -35,6 +36,8 @@ A service-bot with users, variables, and calculation history support to solve eq
         - [ ] Tests refactoring
         - [ ] Coverage increase
         - [ ] Load testing
+    - [ ] Readme update
+    - [ ] Swagger docs update
 
 ## Project structure
 
@@ -93,7 +96,7 @@ Clone repository
 
 ## Build
 
-	go mod tidy && make build
+	go get . && make build
 
 ## Test
 

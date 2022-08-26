@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+
+## Build
+FROM golang:1.19-buster AS build
+
+WORKDIR /service
+
+COPY . ./
+
+RUN go mod download
+
+RUN make build
+
+## Deploy
+FROM alpine
+
+# WORKDIR /service
+
+RUN mkdir logs configs
+
+## Add the wait script to the image
+ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.9.0/wait /wait
+RUN chmod +x /wait
+
+ENV BOT_TOKEN=${BOT_TOKEN}
+ENV SECRET=${SECRET}
+
+COPY --from=build service/bin/mvth /bin/mvth
+COPY --from=build service/configs/config.yaml /configs/config.yaml
+
+EXPOSE 8080
+
+CMD /wait && /bin/mvth

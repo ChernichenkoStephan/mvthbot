@@ -1,6 +1,6 @@
 ---
 App:
-  name: "appName"
+  name: "Mvth service"
   shutdown-timeout: 7
   watchdog-timeout: 7
 Log:
@@ -24,4 +24,5 @@ Api:
   write-timeout: 50
 Database:
   driver: "postgres"
-  source-str: "user=admin dbname=mvthdb sslmode=disable"
+  # source-str: "user=mvthuser dbname=mvthdb sslmode=disable"
+  # source-str: ""

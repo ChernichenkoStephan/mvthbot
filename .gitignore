@@ -40,3 +40,6 @@ bin
 
 # IDE's / source-code editors
 .vscode
+
+# Dockers postgres volume data
+pgdata

@@ -49,15 +49,6 @@ COMMENT ON COLUMN "users"."id" IS 'same as telegram user id';
 
 COMMENT ON COLUMN "variables"."value" IS 'if value equals null, then variable is deleted. (drop line only if statement dropped)';
 
-GRANT ALL PRIVILEGES ON TABLE "users" TO admin;
-GRANT ALL PRIVILEGES ON TABLE "statements" TO admin;
-GRANT ALL PRIVILEGES ON TABLE "variables" TO admin;
-GRANT ALL PRIVILEGES ON TABLE "statementsVariables" TO admin;
-
-GRANT USAGE, SELECT ON SEQUENCE statements_id_seq TO admin;
-GRANT USAGE, SELECT ON SEQUENCE variables_id_seq TO admin;
-GRANT USAGE, SELECT ON SEQUENCE users_id_seq TO admin;
-
 CREATE OR REPLACE FUNCTION set_var(u_tg_id BIGINT, statement_id BIGINT, var_name VARCHAR, var_val NUMERIC) RETURNS BIGINT AS $BODY$
 
 DECLARE var_id integer;

@@ -1,0 +1,58 @@
+
+# docker-compose.yml
+
+version: "3"
+services:
+
+  postgres:
+    image: postgres
+    networks:
+      new:
+        aliases:
+          - database
+    environment:
+      POSTGRES_DB: "mvthdb"
+      POSTGRES_USER: mvthuser
+      POSTGRES_PASSWORD: "mvthpgpass"
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - ../2. Init Database:/docker-entrypoint-initdb.d
+      - .:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mvthuser -d mvthdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 4G
+
+  migrate:
+    image: "migrate:latest"
+    networks:
+      new:
+    environment:
+      WAIT_BEFORE: 15
+      WAIT_SLEEP_INTERVAL: 3
+      WAIT_HOSTS: postgres:5432
+
+
+  mvth:
+    image: "mvthbot:latest"
+    networks:
+      new:
+    environment:
+      WAIT_BEFORE: 15
+      WAIT_SLEEP_INTERVAL: 3
+      WAIT_HOSTS: postgres:5432
+      ENV BOT_TOKEN: ${BOT_TOKEN}
+      ENV SECRET: ${SECRET}
+
+networks:
+      new:

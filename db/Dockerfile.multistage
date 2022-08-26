@@ -1,0 +1,24 @@
+FROM golang:1.19-alpine as builder
+WORKDIR /build
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /main cmd/mvthbot/migrations/main.go
+
+FROM alpine
+
+## Add the wait script to the image
+ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.9.0/wait /wait
+RUN chmod +x /wait
+
+ENV DRIVER="postgres"
+ENV DATA_SOURCE_NAME=${DATA_SOURCE_NAME}
+ENV MIGRATIONS_DIR="migrations"
+
+COPY --from=builder main /bin/main
+COPY --from=builder build/db/migrations /migrations
+
+COPY .db/migrations ./migrations
+
+CMD /wait && /bin/main
