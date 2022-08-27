@@ -13,8 +13,10 @@ Log:
   # max-backups: 7
   # max-age: 7
 Bot:
+  # key: ""
   password-length: 7
-  greetings-text: "Hi, wellcome to mvthbot"
+  commands-texts-path: "./commands/"
+
 Api:
   # port: "port"
   max-connections: 100
@@ -26,3 +28,5 @@ Database:
   driver: "postgres"
   # source-str: "user=mvthuser dbname=mvthdb sslmode=disable"
   # source-str: ""
+
+

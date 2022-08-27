@@ -29,9 +29,10 @@ type configuration struct {
 	}
 
 	Bot struct {
-		PasswordLength int
-		Token          string
-		Greetings      string
+		PasswordLength    int
+		Token             string
+		CommandsTextsPath string
+		Key               string
 	}
 
 	API struct {
@@ -72,7 +73,8 @@ func (c *configuration) defaults() {
 
 	c.Bot.PasswordLength = 8
 	c.Bot.Token = os.Getenv(`BOT_TOKEN`)
-	c.Bot.Greetings = "Wellcome to mvthbot"
+	c.Bot.CommandsTextsPath = `../commands`
+	c.Bot.Key = os.Getenv(`BOT_KEY`)
 
 	c.API.Port = ":8080"
 	c.API.MaxConnections = 100
@@ -193,11 +195,19 @@ func GetConfig() (*configuration, error) {
 		}
 	}
 
-	if it = viper.Get("Bot.greetings-text"); it != nil {
+	if it = viper.Get("Bot.commands-texts-path"); it != nil {
 		if s, ok := it.(string); ok {
-			c.Bot.Greetings = s
+			c.Bot.CommandsTextsPath = s
 		} else {
-			log.Println("Wrong type for param: Bot.greetings-text (shuld be string)")
+			log.Println("Wrong type for param: Bot.commands-texts-path (shuld be string)")
+		}
+	}
+
+	if it = viper.Get("Bot.key"); it != nil {
+		if s, ok := it.(string); ok {
+			c.Bot.Key = s
+		} else {
+			log.Println("Wrong type for param: Bot.key (shuld be string)")
 		}
 	}
 
@@ -264,11 +274,15 @@ func GetConfig() (*configuration, error) {
 			log.Println("Wrong type for param: Database.source (shuld be string)")
 		}
 	}
+
+	if c.Bot.Key == `` {
+		return nil, errors.New(`NEED BOT ADMIN KEY IN ENV VARS or config.yaml`)
+	}
 	if c.Bot.Token == `` {
-		return nil, errors.New("NEED TELEGRAM BOT TOKEN IN ENV VARS")
+		return nil, errors.New(`NEED TELEGRAM BOT TOKEN IN ENV VARS`)
 	}
 	if os.Getenv("SECRET") == `` {
-		return nil, errors.New("NEED SECRET FOR PASSWORD GEN")
+		return nil, errors.New(`NEED SECRET FOR PASSWORD GEN`)
 	}
 
 	return c, nil

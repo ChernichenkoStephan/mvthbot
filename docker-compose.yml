@@ -1,4 +1,3 @@
-
 # docker-compose.yml
 
 version: "3"
@@ -34,26 +33,28 @@ services:
           memory: 4G
 
   migrate:
-    image: "migrate:latest"
+    image: "un000nu/migrate:latest"
     networks:
       new:
     environment:
-      WAIT_BEFORE: 15
+      WAIT_BEFORE: 25
       WAIT_SLEEP_INTERVAL: 3
       WAIT_HOSTS: postgres:5432
-
+      ENV DATA_SOURCE_NAME: ${DATA_SOURCE_NAME}
 
   mvth:
-    image: "mvthbot:latest"
+    image: "un000nu/mvthbot:latest"
     networks:
       new:
     environment:
-      WAIT_BEFORE: 15
+      WAIT_BEFORE: 25
       WAIT_SLEEP_INTERVAL: 3
       WAIT_HOSTS: postgres:5432
+      ENV BOT_KEY: ${BOT_KEY}
       ENV BOT_TOKEN: ${BOT_TOKEN}
       ENV SECRET: ${SECRET}
-      DATA_SOURCE_NAME: ${DATA_SOURCE_NAME}
+      ENV DATA_SOURCE_NAME: ${DATA_SOURCE_NAME}
 
 networks:
       new:
+

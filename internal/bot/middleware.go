@@ -68,23 +68,28 @@ func ArgParse(next tele.HandlerFunc) tele.HandlerFunc {
 func Logging(logger *zap.SugaredLogger) tele.MiddlewareFunc {
 	return func(next tele.HandlerFunc) tele.HandlerFunc {
 		return func(c tele.Context) error {
-			logger.Infof("Message from '%v' with text '%v' in %s[%s|%d]", c.Sender().ID, c.Text(), c.Chat().FirstName, c.Chat().Type, c.Chat().ID)
+			logger.Infof("Message from '%v' with text '%v' from name %s in [%s|%d]", c.Sender().ID, c.Text(), c.Chat().FirstName, c.Chat().Type, c.Chat().ID)
 			return next(c)
 		}
 	}
 }
 
-func UserCheck(db *user.Database) tele.MiddlewareFunc {
+func (b *Bot) UserCheck() tele.MiddlewareFunc {
 	return func(next tele.HandlerFunc) tele.HandlerFunc {
 		return func(c tele.Context) error {
 			if c.Chat().Type != "channel" {
-				ok, err := db.Exist(context.Background(), c.Message().Sender.ID)
+				ok, err := b.db.Exist(context.Background(), c.Message().Sender.ID)
 				if err != nil {
 					return errors.Wrap(err, "User existence check failed")
 				}
 				if !ok {
 					u := user.NewUser(c.Message().Sender.ID)
-					db.Add(context.Background(), u.TelegramID, u.Password)
+					b.db.Add(context.Background(), u.TelegramID, u.Password)
+				}
+			}
+			for _, a := range c.Args() {
+				if a == b.conf.AdminKey {
+					c.Set("RIGHTS", "ROOT")
 				}
 			}
 			return next(c)

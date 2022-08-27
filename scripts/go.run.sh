@@ -1,5 +1,7 @@
-export BOT_TOKEN=<TOKEN>
-export SECRET=<TOKEN>
+export BOT_TOKEN=
+export BOT_KEY=
+export SECRET=
+export DATA_SOURCE_NAME=
 
 make dropdb && \
 make createdb && \

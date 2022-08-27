@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"fmt"
 	"runtime"
 
 	"emperror.dev/errors"
@@ -33,6 +32,17 @@ func NewBot(
 
 func (b Bot) Client() *tele.Bot {
 	return b.client
+}
+
+func (b Bot) GetCommandText(command string) string {
+	if txt, ok := b.ComandsTexts[command]; ok {
+		return txt
+	}
+	return `Text not set (ಥ﹏ಥ)`
+}
+
+func (b Bot) SetCommandText(command, text string) {
+	b.ComandsTexts[command] = text
 }
 
 func (b *Bot) GetUserID(username string) (int64, error) {
@@ -84,12 +94,7 @@ func (b *Bot) Broadcast(ctx context.Context, message string) error {
 	return group.Wait()
 }
 
-func (b *Bot) process(ctx context.Context, uID int64, statements interface{}) (string, error) {
-	sts, ok := statements.([]slv.Statement)
-	if !ok {
-		return "", fmt.Errorf("got error during arg parsing %v", sts)
-	}
-
+func (b *Bot) process(ctx context.Context, uID int64, sts []slv.Statement) (string, error) {
 	builder := NewOutputBuilder()
 
 	err := b.db.WithinTransaction(ctx, func(ctx context.Context) error {

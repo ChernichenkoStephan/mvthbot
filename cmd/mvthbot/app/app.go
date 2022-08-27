@@ -90,7 +90,7 @@ func InitApp(ctx context.Context /*metrics, */, c *configuration, lg *zap.Sugare
 
 	b := tg.NewBot(tgc, db, f, blg, &tg.BotConfig{
 		PasswordLength: c.Bot.PasswordLength,
-		GreetText:      c.Bot.Greetings,
+		AdminKey:       c.Bot.Key,
 	})
 
 	app := &App{
@@ -118,7 +118,7 @@ func InitApp(ctx context.Context /*metrics, */, c *configuration, lg *zap.Sugare
 	}
 
 	// Telegram bot setup
-	err = setupBot(ctx, app, blg)
+	err = setupBot(ctx, c, app.bot, blg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error during Telegram bot setup")
 	}

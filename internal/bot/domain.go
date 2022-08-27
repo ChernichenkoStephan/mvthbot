@@ -11,7 +11,7 @@ import (
 
 type BotConfig struct {
 	PasswordLength int
-	GreetText      string
+	AdminKey       string
 }
 
 type Bot struct {
@@ -25,8 +25,11 @@ type Bot struct {
 	// Fixing mistakes in input
 	stringFixer fixing.Fixer
 
-	// log Logger
+	// Log Logger
 	logger *zap.SugaredLogger
+
+	// Text to output
+	ComandsTexts map[string]string
 
 	conf *BotConfig
 }
@@ -34,7 +37,7 @@ type Bot struct {
 type HandleFunc func(ctx context.Context, c tele.Context) error
 
 type Command struct {
-	Meta            tele.Command
-	Handler         HandleFunc
-	IsParameterized bool
+	Meta      tele.Command
+	Handler   HandleFunc
+	IsPrivate bool
 }

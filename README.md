@@ -257,8 +257,6 @@ Clone repository
 
 ## Bot commands
 
-> Change to list (with output examples)
-
 * `/s` **Solve command.**
 
 	*Simple solve:*
@@ -296,11 +294,11 @@ Clone repository
 	    b = 6
 	    c = 6
 	
-* `/get` **Get user variable value command;**
+* `/g` **Get user variable value command;**
 
 	*Simple*
 	
-	    /get a
+	    /g a
 	    
 	    **Output (a == 4):**
 	    4
@@ -308,7 +306,7 @@ Clone repository
 	
 	*Multiple*
 	
-	    /get a b c
+	    /g a b c
 	    **Output (a == 4, b == 2, c == 1):**
 	    a = 4
 	    b = 2
@@ -325,11 +323,11 @@ Clone repository
          c = 3
 	     
 
-* `/del` **Delete user variable command.**
+* `/d` **Delete user variable command.**
 
 	*Simple*
 	
-	    /del a
+	    /d a
 	    
 	     **Output variants:**
 	     Success
@@ -338,7 +336,7 @@ Clone repository
 	
 	*Multiple*
 	
-	    /del a b c
+	    /d a b c
 	    **Output variants:**
 	     Success
 	     Fault <Not found>

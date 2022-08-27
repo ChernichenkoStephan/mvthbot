@@ -13,6 +13,18 @@ import (
 
 func main() {
 
+	if os.Getenv("DRIVER") == `` {
+		log.Fatal(`Need DRIVER in environment variables`)
+	}
+
+	if os.Getenv("DATA_SOURCE_NAME") == `` {
+		log.Fatal(`Need DATA_SOURCE_NAME in environment variables`)
+	}
+
+	if os.Getenv("MIGRATIONS_DIR") == `` {
+		log.Fatal(`Need MIGRATIONS_DIR in environment variables`)
+	}
+
 	driver_str := os.Getenv("DRIVER")
 	dataSourceName := os.Getenv("DATA_SOURCE_NAME")
 	migPath := `file://` + os.Getenv("MIGRATIONS_DIR")
