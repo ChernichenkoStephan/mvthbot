@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"syscall"
+	"time"
 
 	"emperror.dev/errors"
 	"github.com/ChernichenkoStephan/mvthbot/internal/solving"
@@ -342,18 +344,25 @@ func (b *Bot) HandleSetGreet(ctx context.Context, c tele.Context) error {
 func (b *Bot) HandleAbort(ctx context.Context, c tele.Context) error {
 	if isRoot(c) {
 
-		sendError := c.Send(`Shuting down...`)
-		if sendError != nil {
-			return errors.Wrap(sendError, "Reply failed.")
+		err := c.Send(`Shuting down...`)
+		if err != nil {
+			return errors.Wrap(err, "Reply failed.")
 		}
 
-		<-ctx.Done()
+		syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 
-	}
+		time.Sleep(time.Minute)
 
-	sendError := c.Send(`U shuld be admin to make this. (or got wrong key)`)
-	if sendError != nil {
-		return errors.Wrap(sendError, "Reply failed.")
+		err = c.Send(`Shut down not succeed`)
+		if err != nil {
+			return errors.Wrap(err, "Reply failed.")
+		}
+
+	} else {
+		err := c.Send(`U shuld be admin to make this. (or got wrong key)`)
+		if err != nil {
+			return errors.Wrap(err, "Reply failed.")
+		}
 	}
 
 	return nil

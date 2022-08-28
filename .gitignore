@@ -31,6 +31,7 @@ _arch
 
 # Some tempororary repitable command, sql scripts etc.
 temp
+locals
 
 # Binary files
 bin
@@ -43,3 +44,6 @@ bin
 
 # Dockers postgres volume data
 pgdata
+
+# Secrets
+.env
